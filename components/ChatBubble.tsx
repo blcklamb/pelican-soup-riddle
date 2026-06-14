@@ -8,26 +8,32 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
   }).format(new Date(message.createdAt));
 
   return (
-    <div
-      className={`flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}
-    >
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser ? (
-        <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-md border-2 border-lime-400 bg-[#12351f] text-[#a8f56a]"
-          aria-label="거북이 게임 마스터"
-        >
-          <span aria-hidden="true" className="text-xxl">
-            🐢
-          </span>
+        <div className="flex flex-col items-start gap-1">
+          <div className="flex items-start gap-2">
+            <div
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md border-2 border-lime-400 bg-[#12351f] text-[#a8f56a]"
+              aria-label="거북이 게임 마스터"
+            >
+              <span aria-hidden="true" className="text-xxl">
+                🐢
+              </span>
+            </div>
+            <div className="max-w-[72%] border-2 px-4 py-3 leading-6 shadow-lg rounded-r-lg rounded-tl-lg border-lime-400 bg-[#102d24] text-[#c4ff91]">
+              {message.content}
+            </div>
+          </div>
+          <time className="muted text-[10px]">{time}</time>
         </div>
-      ) : null}
-      {!isUser ? <time className="muted mb-1 text-[10px]">{time}</time> : null}
-      <div
-        className={`max-w-[72%] border-2 px-4 py-3 leading-6 shadow-lg ${isUser ? "rounded-l-lg rounded-tr-lg border-blue-300 bg-[#1853b8]" : "rounded-r-lg rounded-tl-lg border-lime-400 bg-[#102d24] text-[#c4ff91]"}`}
-      >
-        {message.content}
-      </div>
-      {isUser ? <time className="muted mb-1 text-[10px]">{time}</time> : null}
+      ) : (
+        <div className="flex flex-col items-end gap-1">
+          <div className="max-w-[72%] border-2 px-4 py-3 leading-6 shadow-lg rounded-l-lg rounded-tr-lg border-blue-300 bg-[#1853b8]">
+            {message.content}
+          </div>
+          <time className="muted text-[10px]">{time}</time>
+        </div>
+      )}
     </div>
   );
 }

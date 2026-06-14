@@ -3,13 +3,13 @@ import { ArrowLeft, Home } from "lucide-react";
 
 export function AppHeader({
   backHref,
-  label = backHref ? "뒤로" : "홈으로",
+  label,
 }: {
   backHref?: string;
   label?: string;
 }) {
   return (
-    <header className="mb-9 flex items-center justify-between gap-4">
+    <header className="mb-4 flex items-center justify-between gap-4">
       <Link
         className="pixel-button ghost flex min-h-11! items-center justify-center gap-2 px-4! py-2! text-sm"
         href={backHref ?? "/"}
