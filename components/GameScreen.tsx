@@ -38,6 +38,7 @@ function GameContent({ problemId }: { problemId: string }) {
   const [now, setNow] = useState(() => Date.now());
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const focusAfterReplyRef = useRef(false);
   const prevAvailableHintLevelRef = useRef<1 | 2 | null | undefined>(undefined);
 
   const sessionQuery = useQuery({
@@ -60,13 +61,8 @@ function GameContent({ problemId }: { problemId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData<GameSession>(["session", problemId, deviceId], (current) => current ? ({ ...current, conversationHistory: [...current.conversationHistory, data.userMessage, data.assistantMessage], questionCount: data.questionCount }) : current);
       setText("");
-      if (
-        data.questionCount < MAX_QUESTIONS_PER_SESSION &&
-        session &&
-        new Date(session.expiresAt).getTime() > Date.now()
-      ) {
-        inputRef.current?.focus();
-      }
+      focusAfterReplyRef.current =
+        data.questionCount < MAX_QUESTIONS_PER_SESSION;
     },
     onSettled: () => setPendingText(null),
   });
@@ -129,6 +125,16 @@ function GameContent({ problemId }: { problemId: string }) {
     input.focus({ preventScroll: true });
     input.setSelectionRange(input.value.length, input.value.length);
   }, [session?.id, canFocusInput]);
+  useEffect(() => {
+    if (chatMutation.isPending || !focusAfterReplyRef.current || !canFocusInput) {
+      return;
+    }
+    focusAfterReplyRef.current = false;
+    const input = inputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
+  }, [chatMutation.isPending, canFocusInput]);
   useEffect(() => {
     if (!session) return;
     const previous = prevAvailableHintLevelRef.current;
