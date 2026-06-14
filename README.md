@@ -33,7 +33,7 @@ Supabase SQL Editor 또는 CLI에서 다음 순서로 적용합니다.
 supabase db push
 ```
 
-새 자동 생성 시스템에는 `supabase/migrations/202606140006_add_daily_problem_automation.sql`이 필요합니다.
+모든 migration을 순서대로 적용해야 하며, 개선 기능에는 `202606140008`부터 `202606140011`까지의 migration이 필요합니다. 익명 기록 연결 기능을 사용하려면 Supabase Auth에서 Anonymous Sign-Ins를 활성화합니다.
 
 시드 파일은 실행 날짜를 기준으로 최근 10일에 문제를 배치하므로, 적용 즉시 오늘의 문제와 지난 문제를 조회할 수 있습니다. 서비스 역할 키는 서버 Route Handler에서만 사용되며 클라이언트 번들에 포함하면 안 됩니다.
 

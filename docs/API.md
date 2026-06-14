@@ -13,6 +13,8 @@
 | POST | `/api/answers` | 최종 정답 검증 |
 | POST | `/api/sessions/[sessionId]/give-up` | 포기 후 정답 공개 |
 | POST | `/api/sessions/[sessionId]/extend` | 만료 세션 20분 연장 |
+| POST | `/api/sessions/[sessionId]/hint` | 질문 수 조건을 만족한 단계별 힌트 사용 |
+| POST | `/api/feedback` | 종료된 세션의 문제 평가 및 신고 저장 |
 | GET | `/api/cron/release-daily` | 오늘 예약 문제 공개 |
 | GET | `/api/cron/generate-weekly` | 28일 일정의 빈 날짜 생성 |
 | GET | `/api/cron/generate-daily` | 오늘/내일 긴급 보충 |
@@ -20,3 +22,5 @@
 Cron API는 `Authorization: Bearer $CRON_SECRET`이 필요합니다.
 
 주요 상태 코드는 `400` 입력 오류, `401` Cron 인증 실패, `404` 리소스 없음, `409` 세션 상태 충돌, `429` rate limit, `503` 외부 AI 서비스 장애, `504` AI timeout입니다.
+
+오류 응답은 `error`, `code`, `requestId`를 포함합니다. 쓰기 API는 IP와 기기 식별자를 각각 기준으로 요청량을 제한합니다.
