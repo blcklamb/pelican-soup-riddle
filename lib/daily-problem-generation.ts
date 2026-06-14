@@ -115,6 +115,8 @@ export async function generateProblemForDate(
       p_category: candidate.category,
       p_difficulty: candidate.difficulty,
       p_is_released: targetDate <= today,
+      p_hint_1: candidate.hint1,
+      p_hint_2: candidate.hint2,
     });
     if (publishResult.error) throw publishResult.error;
     const problemId = String(publishResult.data);

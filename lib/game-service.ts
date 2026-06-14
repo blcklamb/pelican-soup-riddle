@@ -2,24 +2,27 @@ import { ApiError } from "@/lib/api";
 import { mapSession } from "@/lib/mappers";
 import { createServiceClient } from "@/lib/supabase";
 import type { GameSession } from "@/lib/types";
+import type { RequestIdentity } from "@/lib/auth";
 
 const sessionSelect = `
-  id, device_id, problem_id, status, conversation_history, question_count,
+  id, device_id, user_id, problem_id, status, conversation_history, question_count, extension_count, hint_count,
   started_at, expires_at, completed_at, created_at,
-  problem:problems(id, title, question, category, difficulty, created_at, answer, explanation)
+  problem:problems(id, title, question, category, difficulty, created_at, answer, explanation, hint_1, hint_2)
 `;
 
 export async function getOwnedSession(
   sessionId: string,
-  deviceId: string,
+  identity: RequestIdentity,
 ): Promise<GameSession> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("game_sessions")
     .select(sessionSelect)
-    .eq("id", sessionId)
-    .eq("device_id", deviceId)
-    .maybeSingle();
+    .eq("id", sessionId);
+  query = identity.userId
+    ? query.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
+    : query.eq("device_id", identity.deviceId);
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw error;
   if (!data) throw new ApiError("게임 기록을 찾을 수 없습니다.", 404);

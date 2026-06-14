@@ -22,6 +22,8 @@ const generatedProblemOutput = z.object({
   answerKeywords: z.array(z.string().min(1).max(40)).min(3).max(8),
   category: z.enum(["Paradox", "Weird", "Logic", "Mystery"]),
   difficulty: z.enum(["Easy", "Medium", "Hard"]),
+  hint1: z.string().min(10).max(160),
+  hint2: z.string().min(10).max(160),
 });
 
 const problemReviewOutput = z.object({
@@ -77,6 +79,7 @@ export function buildProblemGenerationPrompt(
     "잔혹한 신체 훼손, 성적 폭력, 혐오, 자해의 상세 묘사, 범죄 실행법은 사용하지 마세요. 위험 요소가 필요하면 비그래픽하고 추리에 필요한 최소 수준으로 제한하세요.",
     "문제만 읽어도 예/아니오 질문으로 좁혀 갈 수 있는 관찰 가능한 단서를 최소 두 개 포함하세요. 정답을 직접 노출하지는 마세요.",
     "answerKeywords에는 정답의 핵심 원인과 메커니즘을 나타내는 서로 다른 한국어 표현 3~8개를 넣으세요.",
+    "hint1은 방향만 제시하고, hint2는 더 구체적이되 정답의 핵심 원인이나 명사를 직접 말하지 마세요.",
     "정답을 안 뒤에도 '그럴 수도 있다' 수준인 해석은 폐기하고, 등장인물의 행동이 현실적으로 가장 납득되는지 검수하세요.",
     "생성 후 다음 질문에 하나라도 아니오라면 다시 작성하세요: 모든 단서가 필요한가, 인과관계가 필연적인가, 핵심 반전에 공정한 단서가 있는가, 억지 설정 없이 설명되는가.",
     existingTitles.length
@@ -85,7 +88,7 @@ export function buildProblemGenerationPrompt(
     previousIssues.length
       ? `이전 생성안의 다음 문제를 모두 수정하세요: ${previousIssues.join(" / ")}`
       : "이전 생성안에 대한 수정 사항은 없습니다.",
-    "출력 필드: title, question, answer, explanation, answerKeywords, category, difficulty.",
+    "출력 필드: title, question, answer, explanation, answerKeywords, category, difficulty, hint1, hint2.",
   ].join("\n\n");
 }
 
@@ -102,7 +105,7 @@ export function buildProblemReviewPrompt(input: {
   return [
     "당신은 한국어 바다거북 스프 문제의 엄격한 편집자입니다.",
     "후보 문제를 독립적으로 검수하고 approved, score, issues, summary를 반환하세요.",
-    "다음 항목을 평가하세요: 공개 상황의 모든 단서가 정답으로 설명되는가, 핵심 인과관계가 현실적으로 필연적인가, 예/아니오 질문으로 풀 수 있는가, 억지 설정이나 우연에 의존하지 않는가, 기존 문제와 핵심 장치가 중복되지 않는가, 한국어가 자연스러운가, 비그래픽하고 서비스에 안전한가.",
+    "다음 항목을 평가하세요: 공개 상황의 모든 단서가 정답으로 설명되는가, 핵심 인과관계가 현실적으로 필연적인가, 예/아니오 질문으로 풀 수 있는가, 억지 설정이나 우연에 의존하지 않는가, 기존 문제와 핵심 장치가 중복되지 않는가, 한국어가 자연스러운가, 비그래픽하고 서비스에 안전한가, 두 힌트가 정답을 직접 노출하지 않는가.",
     "꿈·연극·영화·게임·가상 화면·말장난·사실은 사람이 아니었다는 재정의만으로 반전을 만든 경우 승인하지 마세요.",
     "본문에 단서가 없는 희귀 질환, 특수 직업, 비밀 규칙, 임의의 약속이나 소품이 정답의 핵심이면 승인하지 마세요.",
     "기존 문제와 제목만 다른 채 같은 반전 또는 인과 메커니즘을 사용하면 중복으로 판정하세요.",

@@ -92,6 +92,8 @@ describe("problem generation prompt", () => {
         answerKeywords: ["전광판", "시계", "고장"],
         category: "Logic",
         difficulty: "Easy",
+        hint1: "사건이 일어난 장소의 평소 용도를 생각해 보세요.",
+        hint2: "등장인물이 본 것과 실제 상황이 같았는지 살펴보세요.",
       },
       existingProblems: [{ title: "기존 문제", question: "기존 질문입니다." }],
     });

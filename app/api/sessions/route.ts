@@ -1,22 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiErrorResponse } from "@/lib/api";
+import { handleApiRequest } from "@/lib/api";
+import { resolveRequestIdentity } from "@/lib/auth";
 import { mapSession } from "@/lib/mappers";
 import { createSessionSchema, deviceIdSchema } from "@/lib/schemas";
 import { sessionSelect } from "@/lib/game-service";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
-  try {
+  return handleApiRequest(request, "/api/sessions", async () => {
     const input = createSessionSchema.parse(await request.json());
+    await enforceRateLimit(request, {
+      scope: "sessions",
+      deviceId: input.deviceId,
+      limit: 10,
+      windowSeconds: 60,
+    });
+    const identity = await resolveRequestIdentity(request, input.deviceId);
     const supabase = createServiceClient();
-    const existing = await supabase
+    let existingQuery = supabase
       .from("game_sessions")
       .select(sessionSelect)
-      .eq("device_id", input.deviceId)
       .eq("problem_id", input.problemId)
       .eq("status", "in_progress")
       .order("created_at", { ascending: false })
-      .limit(1)
+      .limit(1);
+    existingQuery = identity.userId
+      ? existingQuery.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
+      : existingQuery.eq("device_id", identity.deviceId);
+    const existing = await existingQuery
       .maybeSingle();
     if (existing.error) throw existing.error;
     if (existing.data) {
@@ -25,27 +37,27 @@ export async function POST(request: Request) {
 
     const created = await supabase
       .from("game_sessions")
-      .insert({ device_id: input.deviceId, problem_id: input.problemId })
+      .insert({ device_id: input.deviceId, user_id: identity.userId, problem_id: input.problemId })
       .select(sessionSelect)
       .single();
     if (created.error) throw created.error;
     return NextResponse.json(mapSession(created.data as unknown as Record<string, unknown>), { status: 201 });
-  } catch (error) {
-    return apiErrorResponse(error);
-  }
+  });
 }
 
 export async function GET(request: NextRequest) {
-  try {
+  return handleApiRequest(request, "/api/sessions", async () => {
     const deviceId = deviceIdSchema.parse(request.nextUrl.searchParams.get("deviceId"));
-    const { data, error } = await createServiceClient()
+    const identity = await resolveRequestIdentity(request, deviceId);
+    let query = createServiceClient()
       .from("game_sessions")
       .select(sessionSelect)
-      .eq("device_id", deviceId)
       .order("created_at", { ascending: false });
+    query = identity.userId
+      ? query.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
+      : query.eq("device_id", identity.deviceId);
+    const { data, error } = await query;
     if (error) throw error;
     return NextResponse.json((data ?? []).map((row) => mapSession(row as unknown as Record<string, unknown>, true)));
-  } catch (error) {
-    return apiErrorResponse(error);
-  }
+  });
 }

@@ -23,6 +23,23 @@ describe("apiErrorResponse", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
       error: "AI 서비스 설정을 확인할 수 없습니다.",
+      code: "AI_CONFIGURATION_ERROR",
+    });
+  });
+
+  it("includes a stable error code and request ID", async () => {
+    const response = apiErrorResponse(
+      new (await import("@/lib/api")).ApiError(
+        "세션 충돌",
+        409,
+        "SESSION_CONFLICT",
+      ),
+      "request-123",
+    );
+    await expect(response.json()).resolves.toMatchObject({
+      error: "세션 충돌",
+      code: "SESSION_CONFLICT",
+      requestId: "request-123",
     });
   });
 });

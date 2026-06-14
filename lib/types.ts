@@ -37,10 +37,14 @@ export interface Solution {
 export interface GameSession {
   id: string;
   deviceId: string;
+  userId: string | null;
   problemId: string;
   status: GameStatus;
   conversationHistory: ChatMessage[];
   questionCount: number;
+  extensionCount: number;
+  hintCount: number;
+  availableHintLevel: 1 | 2 | null;
   startedAt: string;
   expiresAt: string;
   completedAt: string | null;

@@ -20,3 +20,13 @@ export const answerSchema = z.object({
 });
 
 export const sessionActionSchema = z.object({ deviceId: deviceIdSchema });
+
+export const problemFeedbackSchema = z.object({
+  deviceId: deviceIdSchema,
+  sessionId: z.string().uuid(),
+  funRating: z.number().int().min(1).max(5),
+  difficultyRating: z.number().int().min(1).max(5),
+  fairnessRating: z.number().int().min(1).max(5),
+  reportReason: z.enum(["incorrect_answer", "ambiguous", "offensive", "copyright"]).optional(),
+  comment: z.string().trim().max(500).optional(),
+});
