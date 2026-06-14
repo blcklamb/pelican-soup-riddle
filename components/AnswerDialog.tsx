@@ -27,10 +27,10 @@ export function AnswerDialog({
   }, [open]);
 
   return (
-    <dialog ref={ref} onCancel={onClose} className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-[#02040bdd]">
-      <form className="pixel-panel p-6 text-white" onSubmit={(event) => { event.preventDefault(); onSubmit(answer); }}>
+    <dialog ref={ref} onCancel={onClose} className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-black/70">
+      <form className="pixel-panel p-6 text-[#deded8]" onSubmit={(event) => { event.preventDefault(); onSubmit(answer); }}>
         <p className="eyebrow mb-2">Final answer</p>
-        <h2 className="mb-4 text-2xl font-black">정답을 말해보세요</h2>
+        <h2 className="mb-4 text-xl font-bold">정답을 말해보세요</h2>
         <textarea
           autoFocus
           value={answer}
@@ -38,7 +38,7 @@ export function AnswerDialog({
           maxLength={1000}
           rows={5}
           placeholder="상황의 진실은..."
-          className="w-full resize-none rounded border-2 border-[#38558d] bg-[#050b20] p-4 leading-6 text-white placeholder:text-[#596480]"
+          className="w-full resize-none rounded-lg border border-[#22222e] bg-[#0e0e14] p-4 leading-6 text-[#deded8] placeholder:text-[#42425a]"
         />
         {error ? <p className="error-text mt-3 text-sm">{error}</p> : null}
         <div className="mt-5 grid grid-cols-2 gap-3">

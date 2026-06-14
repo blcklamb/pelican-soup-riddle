@@ -99,7 +99,7 @@ function GameContent({ problemId }: { problemId: string }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  if (sessionQuery.isLoading || !deviceId) return <main className="app-shell grid place-items-center"><p className="loading-dots text-cyan-100">게임 연결 중</p></main>;
+  if (sessionQuery.isLoading || !deviceId) return <main className="app-shell grid place-items-center"><p className="loading-dots muted">게임 연결 중</p></main>;
   if (sessionQuery.isError) return <main className="app-shell"><AppHeader /><PixelPanel className="p-7"><p className="error-text">{sessionQuery.error.message}</p></PixelPanel></main>;
   if (!session) return null;
 
@@ -121,28 +121,28 @@ function GameContent({ problemId }: { problemId: string }) {
       <AppHeader />
       <PixelPanel title="문제" className="mb-4 shrink-0 p-5 pt-7">
         <div className="mb-3 flex items-center justify-between gap-3 text-xs">
-          <span className="text-cyan-200">{session.problem.title}</span>
+          <span className="muted font-medium">{session.problem.title}</span>
           <div className="flex items-center gap-2">
-            <span className={`flex items-center gap-1 rounded bg-white/5 px-2 py-1 ${remainingSeconds <= 60 ? "text-[#ffc936]" : "text-cyan-200"}`}><Clock3 aria-hidden="true" size={13} />{remainingLabel}</span>
-            <span className={`flex items-center gap-1 rounded bg-white/5 px-2 py-1 ${remainingQuestions <= 5 ? "text-[#ffc936]" : "text-[#a8f56a]"}`}><MessageCircleQuestion aria-hidden="true" size={13} />질문 {session.questionCount}/{MAX_QUESTIONS_PER_SESSION}</span>
+            <span className={`flex items-center gap-1 rounded-md border px-2 py-1 ${remainingSeconds <= 60 ? "border-[#35280e] bg-[#1c1709] text-[#b89040]" : "border-[#22222e] bg-[#1a1a22] text-[#62627a]"}`}><Clock3 aria-hidden="true" size={13} />{remainingLabel}</span>
+            <span className={`flex items-center gap-1 rounded-md border px-2 py-1 ${remainingQuestions <= 5 ? "border-[#35280e] bg-[#1c1709] text-[#b89040]" : "border-[#22222e] bg-[#1a1a22] text-[#62627a]"}`}><MessageCircleQuestion aria-hidden="true" size={13} />질문 {session.questionCount}/{MAX_QUESTIONS_PER_SESSION}</span>
           </div>
         </div>
-        <p className="max-h-28 overflow-y-auto leading-6 text-[#e8edff]">{session.problem.question}</p>
+        <p className="max-h-28 overflow-y-auto text-sm leading-6 text-[#c0c0d0]">{session.problem.question}</p>
         <div className="mt-4" aria-label={`남은 질문 ${remainingQuestions}개`}>
           <div className="mb-1 flex justify-between text-[10px]">
             <span className="muted">질문 사용량</span>
-            <span className={remainingQuestions <= 5 ? "text-[#ffc936]" : "text-[#a8f56a]"}>남은 질문 {remainingQuestions}개</span>
+            <span className={remainingQuestions <= 5 ? "text-[#b89040]" : "text-[#7aaa6a]"}>남은 질문 {remainingQuestions}개</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-black/40">
+          <div className="h-1 overflow-hidden rounded-full bg-white/5">
             <div
-              className={`h-full transition-[width] ${remainingQuestions <= 5 ? "bg-[#ffc936]" : "bg-[#8df66c]"}`}
+              className={`h-full transition-[width] ${remainingQuestions <= 5 ? "bg-[#b89040]" : "bg-[#7aaa6a]"}`}
               style={{ width: `${questionUsage}%` }}
             />
           </div>
         </div>
       </PixelPanel>
 
-      <section className="min-h-0 flex-1 overflow-y-auto rounded border-2 border-[#27376a] bg-[#04091bd9] px-3 py-5 shadow-inner" aria-live="polite">
+      <section className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[#1e1e28] bg-[#0e0e14] px-3 py-5" aria-live="polite">
         {displayMessages.length === 0 ? <p className="muted px-5 py-12 text-center text-sm leading-6">진실을 찾기 위해 예 또는 아니오로 답할 수 있는 질문을 보내세요.</p> : null}
         <div className="space-y-5">
           {displayMessages.map((message) => <ChatBubble key={message.id} message={message} />)}
@@ -156,8 +156,8 @@ function GameContent({ problemId }: { problemId: string }) {
           <QuestionLimitNotice />
         ) : (
           <div className="flex gap-2">
-            <input value={text} onChange={(event) => setText(event.target.value)} maxLength={300} disabled={busy || sessionExpired} placeholder={`추리를 입력하세요... (남은 ${remainingQuestions}개)`} className="min-w-0 flex-1 rounded border-2 border-[#3c5289] bg-[#060c21] px-4 text-white placeholder:text-[#596480]" />
-            <button aria-label="질문 전송" className="pixel-button flex items-center justify-center gap-2 !px-5" disabled={busy || sessionExpired || !text.trim()} type="submit"><Send aria-hidden="true" size={18} /><span className="hidden min-[420px]:inline">전송</span></button>
+            <input value={text} onChange={(event) => setText(event.target.value)} maxLength={300} disabled={busy || sessionExpired} placeholder={`추리를 입력하세요... (남은 ${remainingQuestions}개)`} className="min-w-0 flex-1 rounded-lg border border-[#22222e] bg-[#0e0e14] px-4 text-[#deded8] placeholder:text-[#42425a]" />
+            <button aria-label="질문 전송" className="pixel-button flex items-center justify-center gap-2 px-5!" disabled={busy || sessionExpired || !text.trim()} type="submit"><Send aria-hidden="true" size={17} /><span className="hidden min-[420px]:inline">전송</span></button>
           </div>
         )}
         {chatMutation.isError ? <p className="error-text mt-2 text-xs">{chatMutation.error.message}</p> : null}

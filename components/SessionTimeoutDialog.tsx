@@ -32,16 +32,16 @@ export function SessionTimeoutDialog({
     <dialog
       ref={ref}
       onCancel={(event) => event.preventDefault()}
-      className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-[#02040bee]"
+      className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-black/70"
     >
-      <section className="pixel-panel p-6 text-center text-white">
+      <section className="pixel-panel p-6 text-center text-[#deded8]">
         <Clock3
-          className="mx-auto mb-4 text-[#ffc936]"
+          className="mx-auto mb-4 text-[#b89040]"
           aria-hidden="true"
-          size={50}
+          size={40}
         />
         <p className="eyebrow mb-2">Session timeout</p>
-        <h2 className="mb-3 text-2xl font-black">20분이 지났습니다</h2>
+        <h2 className="mb-3 text-xl font-bold">20분이 지났습니다</h2>
         <p className="muted leading-7">
           계속 추리하려면 세션을 20분 연장하세요. 포기하면 정답과 해설이
           공개됩니다.

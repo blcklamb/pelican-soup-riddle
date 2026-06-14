@@ -15,17 +15,17 @@ export function ResultDialog({ session }: { session: GameSession | null }) {
 
   const solved = session.status === "solved";
   return (
-    <dialog ref={ref} className="m-auto w-[min(92vw,460px)] rounded-none bg-transparent p-0 backdrop:bg-[#02040bee]">
-      <section className="pixel-panel max-h-[88dvh] overflow-y-auto p-6 text-white">
-        {solved ? <CheckCircle2 className="mx-auto mb-3 text-[#a8f56a]" aria-hidden="true" size={50} /> : <Flag className="mx-auto mb-3 text-[#c6a0ff]" aria-hidden="true" size={50} />}
+    <dialog ref={ref} className="m-auto w-[min(92vw,460px)] rounded-none bg-transparent p-0 backdrop:bg-black/70">
+      <section className="pixel-panel max-h-[88dvh] overflow-y-auto p-6 text-[#deded8]">
+        {solved ? <CheckCircle2 className="mx-auto mb-3 text-[#7aaa6a]" aria-hidden="true" size={44} /> : <Flag className="mx-auto mb-3 text-[#8872b0]" aria-hidden="true" size={44} />}
         <p className="eyebrow text-center">Case closed</p>
-        <h2 className={`mb-6 text-center text-2xl font-black ${solved ? "text-[#a8f56a]" : "text-[#c6a0ff]"}`}>{solved ? "정답입니다!" : "진실을 공개합니다"}</h2>
+        <h2 className={`mb-6 text-center text-xl font-bold ${solved ? "text-[#7aaa6a]" : "text-[#8872b0]"}`}>{solved ? "정답입니다!" : "진실을 공개합니다"}</h2>
         <div className="space-y-5 leading-7">
-          <div><p className="mb-1 text-sm font-bold text-[#ffc936]">정답</p><p>{session.solution?.answer}</p></div>
-          <div><p className="mb-1 text-sm font-bold text-[#39dff5]">해설</p><p className="muted">{session.solution?.explanation}</p></div>
-          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-5 text-center text-sm">
-            <div className="rounded bg-white/5 p-3"><MessageCircleQuestion className="mx-auto mb-1 text-cyan-200" aria-hidden="true" size={18} /><strong className="block text-xl text-white">{session.questionCount}</strong><span className="muted">질문 수</span></div>
-            <div className="rounded bg-white/5 p-3"><Clock3 className="mx-auto mb-1 text-cyan-200" aria-hidden="true" size={18} /><strong className="block text-lg text-white">{formatDuration(session.startedAt, session.completedAt)}</strong><span className="muted">소요 시간</span></div>
+          <div><p className="mb-1 text-xs font-medium text-[#b89040] uppercase tracking-wider">정답</p><p className="text-sm">{session.solution?.answer}</p></div>
+          <div><p className="mb-1 text-xs font-medium text-[#62627a] uppercase tracking-wider">해설</p><p className="muted text-sm">{session.solution?.explanation}</p></div>
+          <div className="grid grid-cols-2 gap-3 border-t border-white/8 pt-5 text-center text-sm">
+            <div className="rounded-lg border border-[#22222e] bg-[#0e0e14] p-3"><MessageCircleQuestion className="mx-auto mb-1 text-[#62627a]" aria-hidden="true" size={17} /><strong className="block text-xl text-[#deded8]">{session.questionCount}</strong><span className="muted text-xs">질문 수</span></div>
+            <div className="rounded-lg border border-[#22222e] bg-[#0e0e14] p-3"><Clock3 className="mx-auto mb-1 text-[#62627a]" aria-hidden="true" size={17} /><strong className="block text-lg text-[#deded8]">{formatDuration(session.startedAt, session.completedAt)}</strong><span className="muted text-xs">소요 시간</span></div>
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3">
