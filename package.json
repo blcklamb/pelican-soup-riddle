@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "problems:import": "node --env-file=.env.local scripts/import-curated-problems.mjs data/curated-problems.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.108.1",

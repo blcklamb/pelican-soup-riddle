@@ -4,9 +4,12 @@ import Link from "next/link";
 import { Archive, History, Radio } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ConfigGate } from "@/components/ConfigGate";
+import { AccountControl } from "@/components/AccountControl";
 import { PixelPanel } from "@/components/PixelPanel";
 import { apiFetch } from "@/lib/client-api";
-import type { PublicProblem } from "@/lib/types";
+import type { GameSession, PublicProblem } from "@/lib/types";
+import { useDeviceId } from "@/lib/use-device-id";
+import { CATEGORY_LABELS, DIFFICULTY_LABELS } from "@/lib/utils";
 
 export function HomeScreen() {
   return (
@@ -17,10 +20,20 @@ export function HomeScreen() {
 }
 
 function HomeContent() {
+  const deviceId = useDeviceId();
   const query = useQuery({
     queryKey: ["daily-problem"],
     queryFn: () => apiFetch<PublicProblem>("/api/problems/daily"),
   });
+  const sessionsQuery = useQuery({
+    queryKey: ["sessions", deviceId],
+    enabled: Boolean(deviceId),
+    queryFn: () => apiFetch<GameSession[]>(`/api/sessions?deviceId=${deviceId}`),
+  });
+  const activeSession = sessionsQuery.data?.find(
+    (session) =>
+      session.problemId === query.data?.id && session.status === "in_progress",
+  );
 
   return (
     <main className="app-shell flex flex-col justify-center py-10">
@@ -44,16 +57,19 @@ function HomeContent() {
           <div className="h-44 animate-pulse rounded bg-white/5" />
         ) : null}
         {query.isError ? (
-          <p className="error-text py-10 text-center">{query.error.message}</p>
+          <div className="py-10 text-center">
+            <p className="error-text mb-4">{query.error.message}</p>
+            <button className="pixel-button ghost" type="button" onClick={() => query.refetch()}>다시 시도</button>
+          </div>
         ) : null}
         {query.data ? (
           <div>
             <div className="mb-5 flex gap-2 text-xs font-medium">
               <span className="rounded-md border border-[#253022] bg-[#121a10] px-3 py-1 text-[#7aaa6a]">
-                {query.data.category}
+                {CATEGORY_LABELS[query.data.category] ?? query.data.category}
               </span>
               <span className="rounded-md border border-[#35280e] bg-[#1c1709] px-3 py-1 text-[#b89040]">
-                {query.data.difficulty}
+                {DIFFICULTY_LABELS[query.data.difficulty] ?? query.data.difficulty}
               </span>
             </div>
             <h2 className="mb-4 text-xl font-bold text-[#deded8]">
@@ -67,7 +83,7 @@ function HomeContent() {
               className="pixel-button mt-7 flex w-full items-center justify-center gap-2"
             >
               <Radio aria-hidden="true" size={17} />
-              시작하기
+              {activeSession ? "이어하기" : "시작하기"}
             </Link>
           </div>
         ) : null}
@@ -91,6 +107,9 @@ function HomeContent() {
       <p className="muted mt-5 text-center text-xs leading-5">
         질문에는 예 · 아니오 · 관련 없음으로만 답합니다.
       </p>
+      <div className="mt-4 flex justify-center">
+        <AccountControl />
+      </div>
     </main>
   );
 }

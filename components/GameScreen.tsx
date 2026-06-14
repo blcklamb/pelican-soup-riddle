@@ -87,6 +87,10 @@ function GameContent({ problemId }: { problemId: string }) {
       );
     },
   });
+  const hintMutation = useMutation({
+    mutationFn: () => apiFetch<GameSession>(`/api/sessions/${session?.id}/hint`, { method: "POST", body: JSON.stringify({ deviceId }) }),
+    onSuccess: (updatedSession) => queryClient.setQueryData(["session", problemId, deviceId], updatedSession),
+  });
 
   const displayMessages = useMemo(() => {
     if (!pendingText) return session?.conversationHistory ?? [];
@@ -115,7 +119,7 @@ function GameContent({ problemId }: { problemId: string }) {
     100,
     (session.questionCount / MAX_QUESTIONS_PER_SESSION) * 100,
   );
-  const busy = chatMutation.isPending || answerMutation.isPending || giveUpMutation.isPending || extendMutation.isPending;
+  const busy = chatMutation.isPending || answerMutation.isPending || giveUpMutation.isPending || extendMutation.isPending || hintMutation.isPending;
   return (
     <main className="app-shell flex h-[100dvh] flex-col overflow-hidden">
       <AppHeader />
@@ -152,6 +156,12 @@ function GameContent({ problemId }: { problemId: string }) {
       </section>
 
       <form className="mt-3 shrink-0" onSubmit={(event) => { event.preventDefault(); if (text.trim() && !busy && !sessionExpired && !questionLimitReached) chatMutation.mutate(text.trim()); }}>
+        {session.availableHintLevel ? (
+          <button type="button" className="pixel-button ghost mb-3 w-full text-sm" disabled={busy || sessionExpired} onClick={() => hintMutation.mutate()}>
+            {hintMutation.isPending ? "힌트 확인 중..." : `${session.availableHintLevel}단계 힌트 사용`}
+          </button>
+        ) : null}
+        {hintMutation.isError ? <p className="error-text mb-2 text-xs">{hintMutation.error.message}</p> : null}
         {questionLimitReached ? (
           <QuestionLimitNotice />
         ) : (
@@ -160,7 +170,19 @@ function GameContent({ problemId }: { problemId: string }) {
             <button aria-label="질문 전송" className="pixel-button flex items-center justify-center gap-2 px-5!" disabled={busy || sessionExpired || !text.trim()} type="submit"><Send aria-hidden="true" size={17} /><span className="hidden min-[420px]:inline">전송</span></button>
           </div>
         )}
-        {chatMutation.isError ? <p className="error-text mt-2 text-xs">{chatMutation.error.message}</p> : null}
+        {chatMutation.isError ? (
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+            <p className="error-text">{chatMutation.error.message}</p>
+            <button
+              type="button"
+              className="pixel-button ghost min-h-9! shrink-0 px-3! py-1! text-xs"
+              disabled={busy || !text.trim()}
+              onClick={() => chatMutation.mutate(text.trim())}
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : null}
         {giveUpMutation.isError ? <p className="error-text mt-2 text-xs">{giveUpMutation.error.message}</p> : null}
         <div className="mt-3 grid grid-cols-2 gap-3">
           <button type="button" className="pixel-button gold flex items-center justify-center gap-2" disabled={busy || sessionExpired} onClick={() => { setAnswerError(undefined); setAnswerOpen(true); }}><Lightbulb aria-hidden="true" size={20} />정답</button>
@@ -175,6 +197,7 @@ function GameContent({ problemId }: { problemId: string }) {
         error={extendMutation.isError ? extendMutation.error.message : giveUpMutation.isError ? giveUpMutation.error.message : undefined}
         onExtend={() => extendMutation.mutate()}
         onGiveUp={() => giveUpMutation.mutate()}
+        canExtend={session.extensionCount < 1}
       />
       <ResultDialog session={result} />
     </main>

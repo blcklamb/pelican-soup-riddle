@@ -14,6 +14,28 @@ const validationOutput = z.object({
   feedback: z.string().min(1).max(180),
 });
 
+const generatedProblemOutput = z.object({
+  title: z.string().min(2).max(40),
+  question: z.string().min(40).max(700),
+  answer: z.string().min(40).max(1000),
+  explanation: z.string().min(30).max(700),
+  answerKeywords: z.array(z.string().min(1).max(40)).min(3).max(8),
+  category: z.enum(["Paradox", "Weird", "Logic", "Mystery"]),
+  difficulty: z.enum(["Easy", "Medium", "Hard"]),
+  hint1: z.string().min(10).max(160),
+  hint2: z.string().min(10).max(160),
+});
+
+const problemReviewOutput = z.object({
+  approved: z.boolean(),
+  score: z.number().int().min(0).max(100),
+  issues: z.array(z.string().min(1).max(160)).max(8),
+  summary: z.string().min(1).max(240),
+});
+
+export type GeneratedProblem = z.infer<typeof generatedProblemOutput>;
+export type ProblemReview = z.infer<typeof problemReviewOutput>;
+
 export function buildGameMasterPrompt(input: {
   question: string;
   answer: string;
@@ -41,21 +63,55 @@ export function buildGameMasterPrompt(input: {
   ].join("\n\n");
 }
 
-export function buildProblemGenerationPrompt(existingTitles: string[] = []) {
+export function buildProblemGenerationPrompt(
+  existingTitles: string[] = [],
+  previousIssues: string[] = [],
+) {
   return [
     "당신은 한국어 바다거북 스프 문제를 설계하고 검수하는 작가입니다.",
+    "완전히 새로운 문제 한 개만 작성하세요. 기존 유명 문제나 온라인 문제의 문장, 반전, 핵심 장치를 재사용하지 마세요.",
     "처음에는 의문스럽지만 정답을 알면 모든 단서가 자연스럽게 설명되는 문제만 생성하세요.",
     "정답은 현실에서 실제로 일어날 수 있는 2~4단계의 명확한 인과관계를 가져야 합니다.",
     "문제 본문에 제시된 행동과 결과가 정답에서 빠짐없이 설명되어야 합니다.",
     "플레이어가 예/아니오 질문 5~15개로 핵심 원인에 접근할 수 있어야 합니다.",
     "다음 방식으로만 반전을 만드는 문제는 금지합니다: 꿈, 연극, 영화, 게임, 가상 화면, 말장난, 동음이의어, 사실은 사람이 아니었다는 재정의.",
     "본문에 근거가 전혀 없는 특수 직업, 희귀 질환, 비밀 약속, 우연한 소품, 임의의 규칙을 정답에 갑자기 추가하지 마세요.",
+    "잔혹한 신체 훼손, 성적 폭력, 혐오, 자해의 상세 묘사, 범죄 실행법은 사용하지 마세요. 위험 요소가 필요하면 비그래픽하고 추리에 필요한 최소 수준으로 제한하세요.",
+    "문제만 읽어도 예/아니오 질문으로 좁혀 갈 수 있는 관찰 가능한 단서를 최소 두 개 포함하세요. 정답을 직접 노출하지는 마세요.",
+    "answerKeywords에는 정답의 핵심 원인과 메커니즘을 나타내는 서로 다른 한국어 표현 3~8개를 넣으세요.",
+    "hint1은 방향만 제시하고, hint2는 더 구체적이되 정답의 핵심 원인이나 명사를 직접 말하지 마세요.",
     "정답을 안 뒤에도 '그럴 수도 있다' 수준인 해석은 폐기하고, 등장인물의 행동이 현실적으로 가장 납득되는지 검수하세요.",
     "생성 후 다음 질문에 하나라도 아니오라면 다시 작성하세요: 모든 단서가 필요한가, 인과관계가 필연적인가, 핵심 반전에 공정한 단서가 있는가, 억지 설정 없이 설명되는가.",
     existingTitles.length
       ? `다음 기존 문제와 소재 및 반전을 중복하지 마세요: ${existingTitles.join(", ")}`
       : "기존의 유명 문제를 문장만 바꾸어 복제하지 마세요.",
-    "출력 필드: title, question, answer, explanation, answerKeywords, category, difficulty.",
+    previousIssues.length
+      ? `이전 생성안의 다음 문제를 모두 수정하세요: ${previousIssues.join(" / ")}`
+      : "이전 생성안에 대한 수정 사항은 없습니다.",
+    "출력 필드: title, question, answer, explanation, answerKeywords, category, difficulty, hint1, hint2.",
+  ].join("\n\n");
+}
+
+export function buildProblemReviewPrompt(input: {
+  candidate: GeneratedProblem;
+  existingProblems: Array<{ title: string; question: string }>;
+}) {
+  const existing = input.existingProblems.length
+    ? input.existingProblems
+        .map((problem) => `- ${problem.title}: ${problem.question.slice(0, 180)}`)
+        .join("\n")
+    : "없음";
+
+  return [
+    "당신은 한국어 바다거북 스프 문제의 엄격한 편집자입니다.",
+    "후보 문제를 독립적으로 검수하고 approved, score, issues, summary를 반환하세요.",
+    "다음 항목을 평가하세요: 공개 상황의 모든 단서가 정답으로 설명되는가, 핵심 인과관계가 현실적으로 필연적인가, 예/아니오 질문으로 풀 수 있는가, 억지 설정이나 우연에 의존하지 않는가, 기존 문제와 핵심 장치가 중복되지 않는가, 한국어가 자연스러운가, 비그래픽하고 서비스에 안전한가, 두 힌트가 정답을 직접 노출하지 않는가.",
+    "꿈·연극·영화·게임·가상 화면·말장난·사실은 사람이 아니었다는 재정의만으로 반전을 만든 경우 승인하지 마세요.",
+    "본문에 단서가 없는 희귀 질환, 특수 직업, 비밀 규칙, 임의의 약속이나 소품이 정답의 핵심이면 승인하지 마세요.",
+    "기존 문제와 제목만 다른 채 같은 반전 또는 인과 메커니즘을 사용하면 중복으로 판정하세요.",
+    "approved는 score가 80 이상이고 치명적인 issue가 없을 때만 true입니다.",
+    `후보 문제:\n${JSON.stringify(input.candidate, null, 2)}`,
+    `기존 문제:\n${existing}`,
   ].join("\n\n");
 }
 
@@ -86,7 +142,84 @@ export function normalizeAiAnswer(answer: AiAnswer): AiAnswer {
 }
 
 function client() {
-  return new OpenAI({ apiKey: getServerEnv().OPENAI_API_KEY });
+  return new OpenAI({
+    apiKey: getServerEnv().OPENAI_API_KEY,
+    timeout: 20_000,
+    maxRetries: 1,
+  });
+}
+
+async function generateProblemCandidate(input: {
+  existingTitles: string[];
+  previousIssues: string[];
+}) {
+  const env = getServerEnv();
+  const response = await client().responses.parse({
+    model: env.OPENAI_MODEL,
+    instructions: buildProblemGenerationPrompt(
+      input.existingTitles,
+      input.previousIssues,
+    ),
+    input: "새로운 데일리 문제 한 개를 생성하세요.",
+    text: { format: zodTextFormat(generatedProblemOutput, "daily_problem") },
+    max_output_tokens: 1800,
+  });
+
+  if (!response.output_parsed) {
+    throw new Error("OpenAI returned no parsed generated problem");
+  }
+  return response.output_parsed;
+}
+
+async function reviewProblemCandidate(input: {
+  candidate: GeneratedProblem;
+  existingProblems: Array<{ title: string; question: string }>;
+}) {
+  const env = getServerEnv();
+  const response = await client().responses.parse({
+    model: env.OPENAI_MODEL,
+    instructions: buildProblemReviewPrompt(input),
+    input: "후보 문제를 기준에 따라 검수하세요.",
+    text: { format: zodTextFormat(problemReviewOutput, "problem_review") },
+    max_output_tokens: 700,
+  });
+
+  if (!response.output_parsed) {
+    throw new Error("OpenAI returned no parsed problem review");
+  }
+  return response.output_parsed;
+}
+
+export async function generateReviewedProblem(input: {
+  existingProblems: Array<{ title: string; question: string }>;
+  maxAttempts?: number;
+}) {
+  const maxAttempts = Math.max(1, Math.min(input.maxAttempts ?? 3, 5));
+  let previousIssues: string[] = [];
+  let lastReview: ProblemReview | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const candidate = await generateProblemCandidate({
+      existingTitles: input.existingProblems.map((problem) => problem.title),
+      previousIssues,
+    });
+    const review = await reviewProblemCandidate({
+      candidate,
+      existingProblems: input.existingProblems,
+    });
+
+    if (review.approved && review.score >= 80) {
+      return { candidate, review, attempts: attempt };
+    }
+
+    lastReview = review;
+    previousIssues = review.issues.length
+      ? review.issues
+      : [review.summary, "품질 점수가 80점 미만입니다."];
+  }
+
+  const reason = lastReview?.issues.join(" / ") || lastReview?.summary || "알 수 없는 검수 실패";
+  throw new Error(`문제 품질 검수를 통과하지 못했습니다: ${reason}`);
 }
 
 export async function classifyQuestion(input: {

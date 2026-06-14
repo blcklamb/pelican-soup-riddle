@@ -1,17 +1,26 @@
 import { NextResponse } from "next/server";
-import { apiErrorResponse, ApiError } from "@/lib/api";
+import { ApiError, handleApiRequest } from "@/lib/api";
+import { resolveRequestIdentity } from "@/lib/auth";
 import { assertSessionActive, getOwnedSession } from "@/lib/game-service";
 import { assertQuestionAvailable } from "@/lib/game-policy";
 import { classifyQuestion } from "@/lib/openai";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { chatSchema } from "@/lib/schemas";
 import { createServiceClient } from "@/lib/supabase";
 import { AI_ANSWER_LABELS, shouldCountQuestion } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
 
 export async function POST(request: Request) {
-  try {
+  return handleApiRequest(request, "/api/chat", async () => {
     const input = chatSchema.parse(await request.json());
-    const session = await getOwnedSession(input.sessionId, input.deviceId);
+    await enforceRateLimit(request, {
+      scope: "chat",
+      deviceId: input.deviceId,
+      limit: 20,
+      windowSeconds: 60,
+    });
+    const identity = await resolveRequestIdentity(request, input.deviceId);
+    const session = await getOwnedSession(input.sessionId, identity);
     assertSessionActive(session);
     assertQuestionAvailable(session.questionCount);
 
@@ -46,13 +55,16 @@ export async function POST(request: Request) {
     const questionCount = shouldCountQuestion(answerType)
       ? session.questionCount + 1
       : session.questionCount;
-    const update = await createServiceClient()
+    let updateQuery = createServiceClient()
       .from("game_sessions")
       .update({ conversation_history: history, question_count: questionCount })
       .eq("id", session.id)
-      .eq("device_id", input.deviceId)
       .eq("status", "in_progress")
-      .eq("question_count", session.questionCount)
+      .eq("question_count", session.questionCount);
+    updateQuery = identity.userId
+      ? updateQuery.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
+      : updateQuery.eq("device_id", identity.deviceId);
+    const update = await updateQuery
       .select("id")
       .maybeSingle();
     if (update.error) throw update.error;
@@ -63,7 +75,5 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.json({ userMessage, assistantMessage, questionCount });
-  } catch (error) {
-    return apiErrorResponse(error);
-  }
+  });
 }

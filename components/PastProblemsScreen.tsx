@@ -18,6 +18,7 @@ import { apiFetch } from "@/lib/client-api";
 import { buildPastProblemEntries } from "@/lib/problem-history";
 import type { GameSession, PublicProblem } from "@/lib/types";
 import { useDeviceId } from "@/lib/use-device-id";
+import { CATEGORY_LABELS, DIFFICULTY_LABELS } from "@/lib/utils";
 
 const stateConfig = {
   in_progress: {
@@ -152,10 +153,10 @@ function PastProblemsContent() {
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="flex gap-2 text-[10px] font-bold">
                     <span className="rounded bg-cyan-400/10 px-2 py-1 text-cyan-200">
-                      {problem.category}
+                      {CATEGORY_LABELS[problem.category] ?? problem.category}
                     </span>
                     <span className="rounded bg-yellow-400/10 px-2 py-1 text-yellow-200">
-                      {problem.difficulty}
+                      {DIFFICULTY_LABELS[problem.difficulty] ?? problem.difficulty}
                     </span>
                   </div>
                   <Link

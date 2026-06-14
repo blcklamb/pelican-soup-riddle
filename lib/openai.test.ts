@@ -3,6 +3,7 @@ import {
   buildAnswerValidationPrompt,
   buildGameMasterPrompt,
   buildProblemGenerationPrompt,
+  buildProblemReviewPrompt,
   normalizeAiAnswer,
 } from "@/lib/openai";
 
@@ -63,6 +64,42 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("가상 화면");
     expect(prompt).toContain("임의의 규칙");
     expect(prompt).toContain("2~4단계의 명확한 인과관계");
+    expect(prompt).toContain("기존 문제");
+  });
+
+  it("includes safety, originality, clues, and retry feedback", () => {
+    const prompt = buildProblemGenerationPrompt(
+      ["기존 문제"],
+      ["핵심 인과관계가 약합니다."],
+    );
+
+    expect(prompt).toContain("완전히 새로운 문제");
+    expect(prompt).toContain("관찰 가능한 단서");
+    expect(prompt).toContain("잔혹한 신체 훼손");
+    expect(prompt).toContain("핵심 인과관계가 약합니다.");
+  });
+
+  it("requires an independent review score of at least 80", () => {
+    const prompt = buildProblemReviewPrompt({
+      candidate: {
+        title: "멈춘 전광판",
+        question:
+          "역의 전광판이 멈춘 것을 본 남자는 열차가 정상 운행 중인데도 곧바로 역무원을 불렀다. 전광판에는 평범한 시각만 표시되어 있었다. 왜 그랬을까?",
+        answer:
+          "남자는 매일 같은 시각에 숫자가 바뀌는 전광판을 관리했다. 표시가 그대로인 것은 내부 시계가 멈췄다는 뜻이었고, 비상 안내도 표시되지 않을 수 있어 역무원을 불렀다.",
+        explanation:
+          "평범한 숫자 자체가 아니라 정해진 시각에도 숫자가 변하지 않은 것이 고장의 단서였다.",
+        answerKeywords: ["전광판", "시계", "고장"],
+        category: "Logic",
+        difficulty: "Easy",
+        hint1: "사건이 일어난 장소의 평소 용도를 생각해 보세요.",
+        hint2: "등장인물이 본 것과 실제 상황이 같았는지 살펴보세요.",
+      },
+      existingProblems: [{ title: "기존 문제", question: "기존 질문입니다." }],
+    });
+
+    expect(prompt).toContain("score가 80 이상");
+    expect(prompt).toContain("핵심 장치가 중복");
     expect(prompt).toContain("기존 문제");
   });
 });

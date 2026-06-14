@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
-import { apiErrorResponse } from "@/lib/api";
+import { ApiError, handleApiRequest } from "@/lib/api";
+import { resolveRequestIdentity } from "@/lib/auth";
 import { assertSessionActive, getOwnedSession } from "@/lib/game-service";
 import { validatePlayerAnswer } from "@/lib/openai";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { answerSchema } from "@/lib/schemas";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
-  try {
+  return handleApiRequest(request, "/api/answers", async () => {
     const input = answerSchema.parse(await request.json());
-    const session = await getOwnedSession(input.sessionId, input.deviceId);
+    await enforceRateLimit(request, {
+      scope: "answers",
+      deviceId: input.deviceId,
+      limit: 8,
+      windowSeconds: 60,
+    });
+    const identity = await resolveRequestIdentity(request, input.deviceId);
+    const session = await getOwnedSession(input.sessionId, identity);
     assertSessionActive(session);
     const supabase = createServiceClient();
     const problemResult = await supabase
@@ -27,15 +36,21 @@ export async function POST(request: Request) {
     const isCorrect = verdict.isCorrect && verdict.confidence >= 0.7;
     if (!isCorrect) return NextResponse.json({ ...verdict, isCorrect: false });
 
-    const { error } = await supabase
+    let updateQuery = supabase
       .from("game_sessions")
       .update({ status: "solved", completed_at: new Date().toISOString() })
       .eq("id", session.id)
-      .eq("device_id", input.deviceId)
       .eq("status", "in_progress");
-    if (error) throw error;
-    return NextResponse.json({ ...verdict, isCorrect: true, session: await getOwnedSession(session.id, input.deviceId) });
-  } catch (error) {
-    return apiErrorResponse(error);
-  }
+    updateQuery = identity.userId
+      ? updateQuery.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
+      : updateQuery.eq("device_id", identity.deviceId);
+    const update = await updateQuery
+      .select("id")
+      .maybeSingle();
+    if (update.error) throw update.error;
+    if (!update.data) {
+      throw new ApiError("다른 종료 요청이 먼저 처리되었습니다.", 409, "SESSION_CONFLICT");
+    }
+    return NextResponse.json({ ...verdict, isCorrect: true, session: await getOwnedSession(session.id, identity) });
+  });
 }
