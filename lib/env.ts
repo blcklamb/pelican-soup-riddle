@@ -34,3 +34,9 @@ export function getMissingEnvKeys() {
 export function isServerConfigured() {
   return getMissingEnvKeys().length === 0;
 }
+
+export function getCronSecret() {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET 환경변수가 필요합니다.");
+  return secret;
+}

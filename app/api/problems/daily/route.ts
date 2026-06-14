@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { apiErrorResponse, ApiError } from "@/lib/api";
+import { getKoreanDate } from "@/lib/korean-date";
 import { mapPublicProblem } from "@/lib/mappers";
 import { createServiceClient } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getKoreanDate();
     const { data, error } = await createServiceClient()
       .from("daily_releases")
       .select("release_date, problem:problems(id, title, question, category, difficulty, created_at)")
