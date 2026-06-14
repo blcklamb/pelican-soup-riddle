@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAnswerValidationPrompt,
   buildGameMasterPrompt,
   buildProblemGenerationPrompt,
   normalizeAiAnswer,
@@ -25,6 +26,35 @@ describe("game master prompt", () => {
       expect(normalizeAiAnswer(answer)).toBe(answer);
     },
   );
+});
+
+describe("answer validation prompt", () => {
+  it("accepts compatible imaginative details when the core context matches", () => {
+    const prompt = buildAnswerValidationPrompt({
+      question: "남자는 수프를 먹고 자살했다. 왜일까?",
+      actualAnswer: "과거에 인육을 바다거북 수프라고 속아 먹었다는 사실을 깨달았다.",
+      keywords: ["조난", "인육", "바다거북 수프"],
+    });
+
+    expect(prompt).toContain("상상해 덧붙였더라도");
+    expect(prompt).toContain("핵심 맥락과 양립");
+    expect(prompt).toContain("직접 모순");
+    expect(prompt).toContain("체크리스트가 아닙니다");
+    expect(prompt).toContain("confidence를 0.7 이상");
+    expect(prompt).toContain("핵심 키워드: 조난, 인육, 바다거북 수프");
+  });
+
+  it("distinguishes harmless additions from a different causal mechanism", () => {
+    const prompt = buildAnswerValidationPrompt({
+      question: "문제",
+      actualAnswer: "정답",
+      keywords: [],
+    });
+
+    expect(prompt).toContain("같은 방식으로 설명");
+    expect(prompt).toContain("핵심 메커니즘을 다른 원인으로 바꾸는 경우");
+    expect(prompt).toContain("핵심 키워드: 없음");
+  });
 });
 
 describe("problem generation prompt", () => {
