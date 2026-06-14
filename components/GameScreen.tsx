@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock3, Flag, Lightbulb, MessageCircleQuestion, Send } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,7 +11,8 @@ import { PixelPanel } from "@/components/PixelPanel";
 import { QuestionLimitNotice } from "@/components/QuestionLimitNotice";
 import { ResultDialog } from "@/components/ResultDialog";
 import { SessionTimeoutDialog } from "@/components/SessionTimeoutDialog";
-import { apiFetch } from "@/lib/client-api";
+import { WaitingScreen } from "@/components/WaitingScreen";
+import { apiFetch, ClientApiError } from "@/lib/client-api";
 import type { AnswerResult, ChatMessage, GameSession } from "@/lib/types";
 import { useDeviceId } from "@/lib/use-device-id";
 import {
@@ -32,14 +33,22 @@ function GameContent({ problemId }: { problemId: string }) {
   const [answerOpen, setAnswerOpen] = useState(false);
   const [answerError, setAnswerError] = useState<string>();
   const [result, setResult] = useState<GameSession | null>(null);
+  const [dismissedHintLevel, setDismissedHintLevel] = useState<1 | 2 | null>(null);
+  const [showHintBanner, setShowHintBanner] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevAvailableHintLevelRef = useRef<1 | 2 | null | undefined>(undefined);
 
   const sessionQuery = useQuery({
     queryKey: ["session", problemId, deviceId],
     enabled: Boolean(deviceId),
     queryFn: () => apiFetch<GameSession>("/api/sessions", { method: "POST", body: JSON.stringify({ problemId, deviceId }) }),
   });
+  const { refetch: refetchSession } = sessionQuery;
+  const retrySession = useCallback(() => {
+    void refetchSession();
+  }, [refetchSession]);
   const session = sessionQuery.data;
 
   const chatMutation = useMutation({
@@ -51,6 +60,13 @@ function GameContent({ problemId }: { problemId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData<GameSession>(["session", problemId, deviceId], (current) => current ? ({ ...current, conversationHistory: [...current.conversationHistory, data.userMessage, data.assistantMessage], questionCount: data.questionCount }) : current);
       setText("");
+      if (
+        data.questionCount < MAX_QUESTIONS_PER_SESSION &&
+        session &&
+        new Date(session.expiresAt).getTime() > Date.now()
+      ) {
+        inputRef.current?.focus();
+      }
     },
     onSettled: () => setPendingText(null),
   });
@@ -89,22 +105,64 @@ function GameContent({ problemId }: { problemId: string }) {
   });
   const hintMutation = useMutation({
     mutationFn: () => apiFetch<GameSession>(`/api/sessions/${session?.id}/hint`, { method: "POST", body: JSON.stringify({ deviceId }) }),
-    onSuccess: (updatedSession) => queryClient.setQueryData(["session", problemId, deviceId], updatedSession),
+    onSuccess: (updatedSession) => {
+      queryClient.setQueryData(["session", problemId, deviceId], updatedSession);
+      setShowHintBanner(false);
+    },
   });
 
   const displayMessages = useMemo(() => {
     if (!pendingText) return session?.conversationHistory ?? [];
     return [...(session?.conversationHistory ?? []), { id: "pending", role: "user" as const, content: pendingText, createdAt: new Date().toISOString(), pending: true }];
   }, [pendingText, session?.conversationHistory]);
+  const canFocusInput = Boolean(
+    session &&
+    new Date(session.expiresAt).getTime() > now &&
+    !hasReachedQuestionLimit(session.questionCount),
+  );
 
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), [displayMessages.length, chatMutation.isPending]);
+  useLayoutEffect(() => {
+    if (!canFocusInput) return;
+    const input = inputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    input.setSelectionRange(input.value.length, input.value.length);
+  }, [session?.id, canFocusInput]);
+  useEffect(() => {
+    if (!session) return;
+    const previous = prevAvailableHintLevelRef.current;
+    const current = session.availableHintLevel;
+    if (
+      previous !== undefined &&
+      current !== null &&
+      current !== previous &&
+      current !== dismissedHintLevel
+    ) {
+      setShowHintBanner(true);
+    }
+    prevAvailableHintLevelRef.current = current;
+  }, [session, dismissedHintLevel]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
 
   if (sessionQuery.isLoading || !deviceId) return <main className="app-shell grid place-items-center"><p className="loading-dots muted">게임 연결 중</p></main>;
-  if (sessionQuery.isError) return <main className="app-shell"><AppHeader /><PixelPanel className="p-7"><p className="error-text">{sessionQuery.error.message}</p></PixelPanel></main>;
+  if (sessionQuery.isError) {
+    const error = sessionQuery.error;
+    if (error instanceof ClientApiError && error.code === "WAITING_QUEUE") {
+      return (
+        <WaitingScreen
+          deviceId={deviceId}
+          position={Number(error.details?.position ?? 1)}
+          estimatedWaitSeconds={Number(error.details?.estimatedWaitSeconds ?? 30)}
+          onReady={retrySession}
+        />
+      );
+    }
+    return <main className="app-shell"><AppHeader /><PixelPanel className="p-7"><p className="error-text">{sessionQuery.error.message}</p></PixelPanel></main>;
+  }
   if (!session) return null;
 
   const sessionExpired = new Date(session.expiresAt).getTime() <= now;
@@ -155,6 +213,35 @@ function GameContent({ problemId }: { problemId: string }) {
         </div>
       </section>
 
+      {showHintBanner && session.availableHintLevel ? (
+        <div className="mt-3 shrink-0 rounded-lg border border-[#594819] bg-[#1c1709] p-4" role="status">
+          <p className="text-sm font-medium text-[#d0ae5c]">
+            {session.availableHintLevel}단계 힌트가 열렸습니다!
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="pixel-button gold min-h-10! py-2! text-sm"
+              disabled={busy || sessionExpired}
+              onClick={() => hintMutation.mutate()}
+            >
+              힌트 보기
+            </button>
+            <button
+              type="button"
+              className="pixel-button ghost min-h-10! py-2! text-sm"
+              disabled={busy}
+              onClick={() => {
+                setDismissedHintLevel(session.availableHintLevel);
+                setShowHintBanner(false);
+              }}
+            >
+              나중에
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <form className="mt-3 shrink-0" onSubmit={(event) => { event.preventDefault(); if (text.trim() && !busy && !sessionExpired && !questionLimitReached) chatMutation.mutate(text.trim()); }}>
         {session.availableHintLevel ? (
           <button type="button" className="pixel-button ghost mb-3 w-full text-sm" disabled={busy || sessionExpired} onClick={() => hintMutation.mutate()}>
@@ -166,7 +253,7 @@ function GameContent({ problemId }: { problemId: string }) {
           <QuestionLimitNotice />
         ) : (
           <div className="flex gap-2">
-            <input value={text} onChange={(event) => setText(event.target.value)} maxLength={300} disabled={busy || sessionExpired} placeholder={`추리를 입력하세요... (남은 ${remainingQuestions}개)`} className="min-w-0 flex-1 rounded-lg border border-[#22222e] bg-[#0e0e14] px-4 text-[#deded8] placeholder:text-[#42425a]" />
+            <input enterKeyHint="send" ref={inputRef} value={text} onChange={(event) => setText(event.target.value)} maxLength={300} disabled={busy || sessionExpired} placeholder={`추리를 입력하세요... (남은 ${remainingQuestions}개)`} className="min-w-0 flex-1 rounded-lg border border-[#22222e] bg-[#0e0e14] px-4 text-[#deded8] placeholder:text-[#42425a]" />
             <button aria-label="질문 전송" className="pixel-button flex items-center justify-center gap-2 px-5!" disabled={busy || sessionExpired || !text.trim()} type="submit"><Send aria-hidden="true" size={17} /><span className="hidden min-[420px]:inline">전송</span></button>
           </div>
         )}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertInProgress,
   assertSessionActive,
+  getQueueStatus,
   isSessionExpired,
 } from "@/lib/game-service";
 import type { GameSession } from "@/lib/types";
@@ -15,6 +16,29 @@ describe("session state transition guard", () => {
 
   it.each(["solved", "given_up"] as const)("rejects %s sessions", (status) => {
     expect(() => assertInProgress({ ...session, status })).toThrow("이미 종료된 게임입니다.");
+  });
+});
+
+describe("queue status", () => {
+  it("allows a new session below the active-session cap", () => {
+    expect(getQueueStatus(99)).toEqual({
+      canEnter: true,
+      position: 0,
+      estimatedWaitSeconds: 0,
+    });
+  });
+
+  it("queues a new session at the active-session cap", () => {
+    expect(getQueueStatus(100)).toEqual({
+      canEnter: false,
+      position: 1,
+      estimatedWaitSeconds: 30,
+    });
+    expect(getQueueStatus(104)).toEqual({
+      canEnter: false,
+      position: 5,
+      estimatedWaitSeconds: 150,
+    });
   });
 });
 

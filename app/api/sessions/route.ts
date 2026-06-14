@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleApiRequest } from "@/lib/api";
+import { ApiError, handleApiRequest } from "@/lib/api";
 import { resolveRequestIdentity } from "@/lib/auth";
 import { mapSession } from "@/lib/mappers";
 import { createSessionSchema, deviceIdSchema } from "@/lib/schemas";
-import { sessionSelect } from "@/lib/game-service";
+import { countActiveSessions, getQueueStatus, sessionSelect } from "@/lib/game-service";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -33,6 +33,19 @@ export async function POST(request: Request) {
     if (existing.error) throw existing.error;
     if (existing.data) {
       return NextResponse.json(mapSession(existing.data as unknown as Record<string, unknown>));
+    }
+
+    const queue = getQueueStatus(await countActiveSessions());
+    if (!queue.canEnter) {
+      throw new ApiError(
+        "현재 접속자가 많아 잠시 대기해주세요.",
+        503,
+        "WAITING_QUEUE",
+        {
+          position: queue.position,
+          estimatedWaitSeconds: queue.estimatedWaitSeconds,
+        },
+      );
     }
 
     const created = await supabase

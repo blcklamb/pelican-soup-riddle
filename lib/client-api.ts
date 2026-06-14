@@ -4,6 +4,7 @@ export class ClientApiError extends Error {
     public status: number,
     public code?: string,
     public requestId?: string,
+    public details?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -26,6 +27,7 @@ export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
       response.status,
       data.code,
       data.requestId,
+      data.details,
     );
   }
   return data as T;

@@ -10,6 +10,35 @@ const sessionSelect = `
   problem:problems(id, title, question, category, difficulty, created_at, answer, explanation, hint_1, hint_2)
 `;
 
+export const MAX_ACTIVE_SESSIONS = 100;
+const ESTIMATED_SECONDS_PER_POSITION = 30;
+
+export function getQueueStatus(activeSessionCount: number) {
+  if (activeSessionCount < MAX_ACTIVE_SESSIONS) {
+    return {
+      canEnter: true,
+      position: 0,
+      estimatedWaitSeconds: 0,
+    };
+  }
+  const position = Math.max(1, activeSessionCount - MAX_ACTIVE_SESSIONS + 1);
+  return {
+    canEnter: false,
+    position,
+    estimatedWaitSeconds: position * ESTIMATED_SECONDS_PER_POSITION,
+  };
+}
+
+export async function countActiveSessions(now = new Date()) {
+  const { count, error } = await createServiceClient()
+    .from("game_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "in_progress")
+    .gt("expires_at", now.toISOString());
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getOwnedSession(
   sessionId: string,
   identity: RequestIdentity,
