@@ -39,19 +39,6 @@ export async function countActiveSessions(now = new Date()) {
   return count ?? 0;
 }
 
-export async function hasExistingSession(identity: RequestIdentity) {
-  let query = createServiceClient()
-    .from("game_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "in_progress");
-  query = identity.userId
-    ? query.or(`user_id.eq.${identity.userId},device_id.eq.${identity.deviceId}`)
-    : query.eq("device_id", identity.deviceId);
-  const { count, error } = await query;
-  if (error) throw error;
-  return (count ?? 0) > 0;
-}
-
 export async function getOwnedSession(
   sessionId: string,
   identity: RequestIdentity,

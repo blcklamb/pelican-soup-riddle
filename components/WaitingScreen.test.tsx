@@ -56,4 +56,40 @@ describe("WaitingScreen", () => {
     );
     expect(onReady).toHaveBeenCalledOnce();
   });
+
+  it("does not overlap queue checks while a request is pending", async () => {
+    vi.useFakeTimers();
+    let resolveRequest: ((value: {
+      canEnter: boolean;
+      position: number;
+      estimatedWaitSeconds: number;
+    }) => void) | undefined;
+    vi.mocked(apiFetch).mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    render(
+      <WaitingScreen
+        deviceId="00000000-0000-4000-8000-000000000000"
+        position={2}
+        estimatedWaitSeconds={60}
+        onReady={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(apiFetch).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      resolveRequest?.({
+        canEnter: false,
+        position: 1,
+        estimatedWaitSeconds: 30,
+      });
+      await Promise.resolve();
+    });
+  });
 });

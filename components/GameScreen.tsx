@@ -38,7 +38,7 @@ function GameContent({ problemId }: { problemId: string }) {
   const [now, setNow] = useState(() => Date.now());
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const prevAvailableHintLevelRef = useRef<1 | 2 | null>(null);
+  const prevAvailableHintLevelRef = useRef<1 | 2 | null | undefined>(undefined);
 
   const sessionQuery = useQuery({
     queryKey: ["session", problemId, deviceId],
@@ -130,9 +130,11 @@ function GameContent({ problemId }: { problemId: string }) {
     input.setSelectionRange(input.value.length, input.value.length);
   }, [session?.id, canFocusInput]);
   useEffect(() => {
+    if (!session) return;
     const previous = prevAvailableHintLevelRef.current;
-    const current = session?.availableHintLevel ?? null;
+    const current = session.availableHintLevel;
     if (
+      previous !== undefined &&
       current !== null &&
       current !== previous &&
       current !== dismissedHintLevel
@@ -140,7 +142,7 @@ function GameContent({ problemId }: { problemId: string }) {
       setShowHintBanner(true);
     }
     prevAvailableHintLevelRef.current = current;
-  }, [session?.availableHintLevel, dismissedHintLevel]);
+  }, [session, dismissedHintLevel]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);

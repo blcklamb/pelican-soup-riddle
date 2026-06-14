@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { PixelPanel } from "@/components/PixelPanel";
@@ -41,8 +41,12 @@ export function WaitingScreen({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const requestInFlightRef = useRef(false);
+  const readyRef = useRef(false);
 
   const checkQueue = useCallback(async () => {
+    if (requestInFlightRef.current || readyRef.current) return;
+    requestInFlightRef.current = true;
     setLoading(true);
     try {
       const next = await apiFetch<QueueStatus>(
@@ -50,7 +54,10 @@ export function WaitingScreen({
       );
       setStatus(next);
       setError(undefined);
-      if (next.canEnter) onReady();
+      if (next.canEnter) {
+        readyRef.current = true;
+        onReady();
+      }
     } catch (queueError) {
       setError(
         queueError instanceof Error
@@ -58,6 +65,7 @@ export function WaitingScreen({
           : "대기 상태를 확인하지 못했습니다.",
       );
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
     }
   }, [deviceId, onReady]);
