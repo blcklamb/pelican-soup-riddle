@@ -59,6 +59,28 @@ export function buildProblemGenerationPrompt(existingTitles: string[] = []) {
   ].join("\n\n");
 }
 
+export function buildAnswerValidationPrompt(input: {
+  question: string;
+  actualAnswer: string;
+  keywords: string[];
+}) {
+  return [
+    "당신은 한국어 추리 게임 '바다거북 스프'의 관대한 정답 채점자입니다.",
+    "문장 표현이나 세부 설정의 정확한 복제가 아니라, 사건을 설명하는 핵심 원인과 인과관계가 실제 정답과 같은지 평가하세요.",
+    "플레이어가 실제 정답에 없는 인물의 감정, 장소, 시간, 도구, 행동 과정 등의 세부사항을 상상해 덧붙였더라도 핵심 맥락과 양립하고 사건의 원인과 결과를 같은 방식으로 설명한다면 정답으로 판정하세요.",
+    "추가된 세부사항이 실제 정답에 명시되지 않았다는 이유만으로 오답 처리하지 마세요. 실제 정답과 직접 모순되거나 핵심 메커니즘을 다른 원인으로 바꾸는 경우에만 그 세부사항을 감점하세요.",
+    "핵심 등장인물이나 사물의 명칭이 달라도 역할과 기능이 같으면 같은 개념으로 인정하세요.",
+    "핵심 키워드는 의미 비교를 돕는 참고 자료이며, 모든 단어를 그대로 포함해야 하는 체크리스트가 아닙니다. 동의어, 의역, 상위·하위 개념도 문맥상 같은 의미라면 인정하세요.",
+    "다음 조건을 모두 만족하면 isCorrect를 true로 판정하세요: 핵심 반전 또는 원인을 짚었고, 문제의 주요 행동과 결과를 설명하며, 실제 정답의 핵심 사실과 모순되지 않는다.",
+    "핵심 원인을 빠뜨린 추측, 결과만 반복한 답, 실제 정답과 모순되는 설명, 우연히 키워드만 나열한 답은 오답입니다.",
+    "정답 맥락이 실질적으로 일치하면 사소한 불확실성이 있어도 confidence를 0.7 이상으로 설정하세요.",
+    "정답이면 추가 상상까지 지적하지 말고 간결하게 축하하세요. 오답이면 실제 정답이나 새로운 핵심 단서를 누설하지 않은 채 다시 생각하도록 안내하세요.",
+    `문제: ${input.question}`,
+    `실제 정답: ${input.actualAnswer}`,
+    `핵심 키워드: ${input.keywords.length ? input.keywords.join(", ") : "없음"}`,
+  ].join("\n\n");
+}
+
 export function normalizeAiAnswer(answer: AiAnswer): AiAnswer {
   return answer;
 }
@@ -95,14 +117,7 @@ export async function validatePlayerAnswer(input: {
   const env = getServerEnv();
   const response = await client().responses.parse({
     model: env.OPENAI_MODEL,
-    instructions: [
-      "당신은 한국어 추리 게임의 정답 채점자입니다.",
-      "표현이나 사소한 세부사항보다 핵심 원인과 논리적 메커니즘의 일치를 평가하세요.",
-      "핵심이 맞으면 간결하게 축하하고, 틀리면 정답을 누설하지 않은 채 다시 생각하도록 안내하세요.",
-      `문제: ${input.question}`,
-      `실제 정답: ${input.actualAnswer}`,
-      `핵심 키워드: ${input.keywords.join(", ")}`,
-    ].join("\n\n"),
+    instructions: buildAnswerValidationPrompt(input),
     input: input.userAnswer,
     text: { format: zodTextFormat(validationOutput, "answer_validation") },
     max_output_tokens: 160,
