@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppProviders } from "@/lib/query-client";
+import { Analytics } from "@vercel/analytics/next";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -38,8 +39,7 @@ export const metadata: Metadata = {
     url: "/",
     siteName: "Turtle Soup AI",
     title: "Turtle Soup AI | 바다거북 스프 추리 게임",
-    description:
-      "예·아니오 질문으로 단서를 모아 오늘의 미스터리를 해결하세요.",
+    description: "예·아니오 질문으로 단서를 모아 오늘의 미스터리를 해결하세요.",
     images: [
       {
         url: "/og-image.png",
@@ -52,8 +52,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Turtle Soup AI | 바다거북 스프 추리 게임",
-    description:
-      "예·아니오 질문으로 단서를 모아 오늘의 미스터리를 해결하세요.",
+    description: "예·아니오 질문으로 단서를 모아 오늘의 미스터리를 해결하세요.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -70,11 +69,14 @@ export const viewport: Viewport = {
   themeColor: "#0c0c11",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" style={{ background: "#0c0c11" }}>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Analytics />
       </body>
     </html>
   );
