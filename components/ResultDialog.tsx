@@ -7,27 +7,35 @@ import type { GameSession } from "@/lib/types";
 import { ProblemFeedbackForm } from "@/components/ProblemFeedbackForm";
 import { DIFFICULTY_LABELS, formatDuration } from "@/lib/utils";
 
+export function getResultShareText(
+  session: Pick<GameSession, "status" | "questionCount" | "hintCount">,
+) {
+  const result = session.status === "solved" ? "해결했어요" : "진실을 확인했어요";
+  return `Turtle Soup AI 문제를 질문 ${session.questionCount}개, 힌트 ${session.hintCount}개로 ${result}.`;
+}
+
 export function ResultDialog({ session }: { session: GameSession | null }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [shareLabel, setShareLabel] = useState("공유");
+  const [shareState, setShareState] = useState({ sessionId: "", label: "공유" });
   useEffect(() => {
     if (session && ref.current && !ref.current.open) ref.current.showModal();
   }, [session]);
   if (!session) return null;
 
   const solved = session.status === "solved";
+  const shareLabel = shareState.sessionId === session.id ? shareState.label : "공유";
   async function shareResult() {
-    const text = `Turtle Soup AI 문제를 질문 ${session?.questionCount}개, 힌트 ${session?.hintCount}개로 해결했어요.`;
+    const text = getResultShareText(session!);
     try {
       if (navigator.share) {
         await navigator.share({ title: "Turtle Soup AI", text, url: `${window.location.origin}/game/${session?.problemId}` });
       } else {
         await navigator.clipboard.writeText(`${text} ${window.location.origin}/game/${session?.problemId}`);
-        setShareLabel("복사됨");
+        setShareState({ sessionId: session!.id, label: "복사됨" });
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setShareLabel("실패");
+      setShareState({ sessionId: session!.id, label: "실패" });
     }
   }
   return (

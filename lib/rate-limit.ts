@@ -32,16 +32,14 @@ export async function enforceRateLimit(
     digest(`ip:${getClientIp(request)}`),
     digest(`device:${options.deviceId}`),
   ]);
+  const supabase = createServiceClient();
 
   for (const identity of identities) {
-    const { data, error } = await createServiceClient().rpc(
-      "consume_api_rate_limit",
-      {
-        p_key: `${options.scope}:${identity}`,
-        p_window_seconds: options.windowSeconds,
-        p_limit: options.limit,
-      },
-    );
+    const { data, error } = await supabase.rpc("consume_api_rate_limit", {
+      p_key: `${options.scope}:${identity}`,
+      p_window_seconds: options.windowSeconds,
+      p_limit: options.limit,
+    });
     if (error) throw error;
 
     const result = Array.isArray(data) ? data[0] : data;

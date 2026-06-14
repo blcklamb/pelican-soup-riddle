@@ -21,12 +21,5 @@ export async function resolveRequestIdentity(
   deviceId: string,
 ): Promise<RequestIdentity> {
   const user = await getOptionalUser(request);
-  if (user) {
-    const { error } = await createServiceClient().rpc("claim_device_sessions", {
-      p_user_id: user.id,
-      p_device_id: deviceId,
-    });
-    if (error) throw error;
-  }
   return { deviceId, userId: user?.id ?? null };
 }

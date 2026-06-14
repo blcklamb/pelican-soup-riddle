@@ -1,6 +1,6 @@
 # API
 
-모든 요청과 응답은 JSON입니다. 세션 API는 `deviceId`와 DB의 `device_id`가 일치해야 합니다.
+모든 요청과 응답은 JSON입니다. 세션 API에는 항상 `deviceId`가 필요합니다. Bearer 인증이 없으면 DB의 `device_id`가 일치하는 세션만 허용하고, 인증된 요청은 해당 `user_id` 또는 현재 `device_id`에 속한 세션을 허용합니다. 로그인 이후 생성한 세션은 `user_id`에도 귀속되지만 기존 기기 기록을 계정으로 자동 이전하지 않습니다.
 
 | Method | Path | Description |
 | --- | --- | --- |

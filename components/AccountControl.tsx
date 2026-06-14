@@ -34,10 +34,10 @@ export function AccountControl() {
       className="pixel-button ghost flex min-h-10! items-center justify-center gap-2 px-3! py-2! text-xs"
       disabled={loading}
       onClick={toggleConnection}
-      title={connected ? "연결된 기록을 이 브라우저에서 해제합니다." : "현재 기록을 익명 계정에 연결합니다."}
+      title={connected ? "이 브라우저에서 계정 사용을 종료합니다." : "이후 생성되는 기록을 익명 계정에 저장합니다."}
     >
       {connected ? <Cloud aria-hidden="true" size={15} /> : <CloudOff aria-hidden="true" size={15} />}
-      {connected ? "기록 연결됨" : "기록 연결"}
+      {connected ? "계정 사용 중" : "계정 사용"}
     </button>
   );
 }
