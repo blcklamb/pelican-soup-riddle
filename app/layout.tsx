@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" style={{ background: "#0c0c11" }}>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>
