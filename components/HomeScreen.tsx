@@ -56,7 +56,9 @@ function HomeContent() {
                 {query.data.difficulty}
               </span>
             </div>
-            <h2 className="mb-4 text-xl font-bold text-[#deded8]">{query.data.title}</h2>
+            <h2 className="mb-4 text-xl font-bold text-[#deded8]">
+              {query.data.title}
+            </h2>
             <p className="muted line-clamp-3 leading-7 text-sm">
               {query.data.question}
             </p>
@@ -77,14 +79,13 @@ function HomeContent() {
           className="pixel-button flex items-center justify-center gap-2 px-3!"
         >
           <History aria-hidden="true" size={17} />
-          이전 문제
+          다른 문제
         </Link>
         <Link
           href="/archive"
           className="pixel-button violet flex items-center justify-center gap-2 px-3!"
         >
-          <Archive aria-hidden="true" size={17} />
-          내 기록
+          <Archive aria-hidden="true" size={17} />내 기록
         </Link>
       </div>
       <p className="muted mt-5 text-center text-xs leading-5">

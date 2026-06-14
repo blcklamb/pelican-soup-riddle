@@ -89,8 +89,10 @@ function PastProblemsContent() {
           aria-hidden="true"
           size={40}
         />
-        <h1 className="text-3xl font-black">이전 문제</h1>
-        <p className="muted mt-2 text-sm">발행된 사건을 골라 다시 조사하세요.</p>
+        <h1 className="text-3xl font-black">다른 문제</h1>
+        <p className="muted mt-2 text-sm">
+          발행된 사건을 골라 다시 조사하세요.
+        </p>
       </header>
 
       <PixelPanel title="지난 사건" className="p-5 pt-8">
