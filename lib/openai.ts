@@ -139,7 +139,11 @@ export function normalizeAiAnswer(answer: AiAnswer): AiAnswer {
 }
 
 function client() {
-  return new OpenAI({ apiKey: getServerEnv().OPENAI_API_KEY });
+  return new OpenAI({
+    apiKey: getServerEnv().OPENAI_API_KEY,
+    timeout: 20_000,
+    maxRetries: 1,
+  });
 }
 
 async function generateProblemCandidate(input: {

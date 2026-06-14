@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { addCalendarDays, getKoreanDate } from "@/lib/korean-date";
+import {
+  addCalendarDays,
+  getCalendarDateRange,
+  getKoreanDate,
+} from "@/lib/korean-date";
 
 describe("Korean calendar date", () => {
   it("switches dates at midnight in Korea", () => {
@@ -13,5 +17,14 @@ describe("Korean calendar date", () => {
 
   it("adds days across month boundaries", () => {
     expect(addCalendarDays("2026-06-30", 1)).toBe("2026-07-01");
+  });
+
+  it("creates an inclusive schedule range", () => {
+    expect(getCalendarDateRange("2026-06-29", 4)).toEqual([
+      "2026-06-29",
+      "2026-06-30",
+      "2026-07-01",
+      "2026-07-02",
+    ]);
   });
 });

@@ -1,16 +1,15 @@
 import { generateReviewedProblem } from "@/lib/openai";
-import { addCalendarDays, getKoreanDate } from "@/lib/korean-date";
+import {
+  addCalendarDays,
+  getCalendarDateRange,
+  getKoreanDate,
+} from "@/lib/korean-date";
 import { createServiceClient } from "@/lib/supabase";
 
-export type DailyGenerationResult =
-  | {
-      status: "covered";
-      coveredDates: string[];
-    }
-  | {
-      status: "running";
-      targetDate: string;
-    }
+export const SCHEDULE_HORIZON_DAYS = 28;
+const GENERATION_CONCURRENCY = 3;
+
+export type GeneratedDateResult =
   | {
       status: "generated";
       targetDate: string;
@@ -18,7 +17,17 @@ export type DailyGenerationResult =
       title: string;
       attempts: number;
       reviewScore: number;
-    };
+    }
+  | { status: "running"; targetDate: string }
+  | { status: "failed"; targetDate: string; error: string };
+
+export interface ScheduleGenerationResult {
+  requested: number;
+  generated: number;
+  running: number;
+  failed: number;
+  results: GeneratedDateResult[];
+}
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -35,37 +44,39 @@ export function chooseGenerationTarget(
   return null;
 }
 
-export async function ensureDailyProblem(now = new Date()): Promise<DailyGenerationResult> {
-  const supabase = createServiceClient();
-  const today = getKoreanDate(now);
-  const tomorrow = addCalendarDays(today, 1);
-
-  const releaseResult = await supabase
-    .from("daily_releases")
-    .select("release_date")
-    .in("release_date", [today, tomorrow]);
-  if (releaseResult.error) throw releaseResult.error;
-
-  const scheduledDates = (releaseResult.data ?? []).map((release) =>
-    String(release.release_date),
+export function getMissingScheduleDates(
+  startDate: string,
+  days: number,
+  scheduledDates: string[],
+) {
+  const scheduled = new Set(scheduledDates);
+  return getCalendarDateRange(startDate, days).filter(
+    (date) => !scheduled.has(date),
   );
-  const targetDate = chooseGenerationTarget(today, scheduledDates);
-  if (!targetDate) {
-    return { status: "covered", coveredDates: [today, tomorrow] };
-  }
+}
 
+async function markStaleRunFailed(targetDate: string, now: Date) {
   const staleBefore = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
-  const staleResult = await supabase
+  const { error } = await createServiceClient()
     .from("problem_generation_runs")
     .update({
       status: "failed",
       message: "실행 시간이 15분을 초과하여 자동 종료되었습니다.",
-      completed_at: new Date().toISOString(),
+      completed_at: now.toISOString(),
     })
     .eq("target_date", targetDate)
     .eq("status", "running")
     .lt("started_at", staleBefore);
-  if (staleResult.error) throw staleResult.error;
+  if (error) throw error;
+}
+
+export async function generateProblemForDate(
+  targetDate: string,
+  now = new Date(),
+): Promise<GeneratedDateResult> {
+  const supabase = createServiceClient();
+  const today = getKoreanDate(now);
+  await markStaleRunFailed(targetDate, now);
 
   const runResult = await supabase
     .from("problem_generation_runs")
@@ -83,19 +94,17 @@ export async function ensureDailyProblem(now = new Date()): Promise<DailyGenerat
       .from("problems")
       .select("title, question")
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(300);
     if (existingResult.error) throw existingResult.error;
 
-    const existingProblems = (existingResult.data ?? []).map((problem) => ({
-      title: String(problem.title),
-      question: String(problem.question),
-    }));
     const generated = await generateReviewedProblem({
-      existingProblems,
+      existingProblems: (existingResult.data ?? []).map((problem) => ({
+        title: String(problem.title),
+        question: String(problem.question),
+      })),
       maxAttempts: 3,
     });
     const candidate = generated.candidate;
-
     const publishResult = await supabase.rpc("publish_generated_daily_problem", {
       p_release_date: targetDate,
       p_title: candidate.title,
@@ -105,6 +114,7 @@ export async function ensureDailyProblem(now = new Date()): Promise<DailyGenerat
       p_answer_keywords: candidate.answerKeywords,
       p_category: candidate.category,
       p_difficulty: candidate.difficulty,
+      p_is_released: targetDate <= today,
     });
     if (publishResult.error) throw publishResult.error;
     const problemId = String(publishResult.data);
@@ -131,16 +141,88 @@ export async function ensureDailyProblem(now = new Date()): Promise<DailyGenerat
       reviewScore: generated.review.score,
     };
   } catch (error) {
+    const message = errorMessage(error);
     const failedResult = await supabase
       .from("problem_generation_runs")
       .update({
         status: "failed",
-        message: errorMessage(error).slice(0, 1000),
+        message: message.slice(0, 1000),
         completed_at: new Date().toISOString(),
       })
       .eq("id", runId);
-
     if (failedResult.error) console.error(failedResult.error);
-    throw error;
+    return { status: "failed", targetDate, error: message };
   }
+}
+
+export async function fillProblemSchedule(input?: {
+  startDate?: string;
+  days?: number;
+  maxGenerate?: number;
+  now?: Date;
+}): Promise<ScheduleGenerationResult> {
+  const now = input?.now ?? new Date();
+  const startDate = input?.startDate ?? getKoreanDate(now);
+  const days = Math.max(1, Math.min(input?.days ?? SCHEDULE_HORIZON_DAYS, 35));
+  const maxGenerate = Math.max(1, Math.min(input?.maxGenerate ?? days, days));
+  const endDate = addCalendarDays(startDate, days - 1);
+  const scheduleResult = await createServiceClient()
+    .from("daily_releases")
+    .select("release_date")
+    .gte("release_date", startDate)
+    .lte("release_date", endDate);
+  if (scheduleResult.error) throw scheduleResult.error;
+
+  const missingDates = getMissingScheduleDates(
+    startDate,
+    days,
+    (scheduleResult.data ?? []).map((row) => String(row.release_date)),
+  ).slice(0, maxGenerate);
+  const results: GeneratedDateResult[] = [];
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < missingDates.length) {
+      const targetDate = missingDates[nextIndex];
+      nextIndex += 1;
+      results.push(await generateProblemForDate(targetDate, now));
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(GENERATION_CONCURRENCY, missingDates.length) },
+      () => worker(),
+    ),
+  );
+  results.sort((a, b) => a.targetDate.localeCompare(b.targetDate));
+
+  return {
+    requested: missingDates.length,
+    generated: results.filter((result) => result.status === "generated").length,
+    running: results.filter((result) => result.status === "running").length,
+    failed: results.filter((result) => result.status === "failed").length,
+    results,
+  };
+}
+
+export async function releaseDailyProblem(now = new Date()) {
+  const releaseDate = getKoreanDate(now);
+  const result = await createServiceClient().rpc(
+    "release_scheduled_daily_problem",
+    { p_release_date: releaseDate },
+  );
+  if (result.error) throw result.error;
+  return { releaseDate, released: Number(result.data ?? 0) };
+}
+
+export async function ensureDailyProblem(now = new Date()) {
+  const release = await releaseDailyProblem(now);
+  const schedule = await fillProblemSchedule({
+    startDate: getKoreanDate(now),
+    days: 2,
+    maxGenerate: 1,
+    now,
+  });
+  return { release, schedule };
 }

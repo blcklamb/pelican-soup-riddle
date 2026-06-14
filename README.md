@@ -61,23 +61,30 @@ npm run build
 
 ## 데일리 문제 자동 생성
 
-Vercel Cron이 매일 `14:50 UTC`(`23:50 KST`)에 `/api/cron/generate-daily`를 호출합니다.
-
-- 오늘 문제가 없으면 오늘 날짜를 우선 복구합니다.
-- 오늘 문제가 있으면 다음 날 문제를 미리 생성합니다.
-- 오늘과 다음 날이 모두 준비되어 있으면 OpenAI를 호출하지 않습니다.
-- 생성 문제는 별도 AI 검수에서 80점 이상을 받아야 저장됩니다.
-- 검수 실패 시 최대 3회 다시 생성합니다.
-- 동일 날짜 중복 실행과 15분 이상 멈춘 실행을 자동 처리합니다.
-- 생성 및 실패 이력은 `problem_generation_runs` 테이블에 기록됩니다.
+- 매주 월요일 `00:10 KST`: 앞으로 28일 중 비어 있는 날짜를 AI 문제로 보충
+- 매일 `00:00 KST`: 예약된 오늘 문제를 공개
+- 생성 문제는 별도 AI 검수에서 80점 이상을 받아야 저장
+- 검수 실패 시 날짜별 최대 3회 재생성
+- 동일 날짜 중복 실행과 15분 이상 멈춘 실행 자동 처리
+- 생성 및 실패 이력은 `problem_generation_runs` 테이블에 기록
+- 공개 전 문제는 `is_released=false` 상태로 보관되어 사용자 API에서 조회 불가
 
 Vercel 프로젝트의 Production 환경에 16자 이상의 임의 문자열로 `CRON_SECRET`을 설정해야 합니다. Vercel은 이 값을 Cron 요청의 `Authorization: Bearer ...` 헤더로 자동 전송합니다.
 
-수동 실행은 배포 주소에서 다음과 같이 할 수 있습니다.
+수동 보충 실행은 배포 주소에서 다음과 같이 할 수 있습니다.
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" \
-  https://your-domain.example/api/cron/generate-daily
+  https://your-domain.example/api/cron/generate-weekly
 ```
 
-Vercel Hobby 플랜은 Cron 실행 시간이 설정된 한 시간 안에서 지연될 수 있습니다. 이 경우 자정 전에 미리 생성되지 못하면 실행 시점에 오늘 문제를 생성하고, 생성이 완료될 때까지 직전 문제가 계속 표시됩니다.
+외부 자료를 참고한 수동 큐레이션 문제는 [Curated Problem Import](docs/CURATED_PROBLEM_FORMAT.md) 형식으로 등록합니다. 외부 문구를 자동 복제하지 않고, 출처를 기록한 자체 문안만 허용합니다.
+
+Vercel Hobby 플랜은 Cron 실행 시간이 설정된 한 시간 안에서 지연될 수 있습니다. 공개 지연 시 `/api/cron/release-daily`를 인증 헤더와 함께 수동 호출할 수 있습니다.
+
+## 운영 문서
+
+- [API 계약](docs/API.md)
+- [배포 및 자동화](docs/DEPLOYMENT.md)
+- [AI 프롬프트 정책](docs/AI_PROMPTS.md)
+- [문제 해결](docs/TROUBLESHOOTING.md)

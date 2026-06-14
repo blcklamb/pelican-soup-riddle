@@ -19,3 +19,9 @@ export function addCalendarDays(date: string, days: number) {
   parsed.setUTCDate(parsed.getUTCDate() + days);
   return parsed.toISOString().slice(0, 10);
 }
+
+export function getCalendarDateRange(startDate: string, days: number) {
+  return Array.from({ length: Math.max(0, days) }, (_, index) =>
+    addCalendarDays(startDate, index),
+  );
+}
