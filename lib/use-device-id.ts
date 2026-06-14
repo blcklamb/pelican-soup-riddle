@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { getOrCreateDeviceId } from "@/lib/device";
 
+const subscribe = () => () => undefined;
+const getServerSnapshot = () => null;
+
 export function useDeviceId() {
-  const [deviceId, setDeviceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDeviceId(getOrCreateDeviceId());
-  }, []);
-
-  return deviceId;
+  return useSyncExternalStore(
+    subscribe,
+    getOrCreateDeviceId,
+    getServerSnapshot,
+  );
 }

@@ -37,9 +37,10 @@ describe("getOrCreateDeviceId", () => {
   });
 
   it("returns the existing device ID", () => {
-    window.localStorage.setItem("turtle_soup_device_id", "existing-device-id");
+    const existingDeviceId = "123e4567-e89b-42d3-a456-426614174000";
+    window.localStorage.setItem("turtle_soup_device_id", existingDeviceId);
 
-    expect(getOrCreateDeviceId()).toBe("existing-device-id");
+    expect(getOrCreateDeviceId()).toBe(existingDeviceId);
   });
 
   it("stores a generated device ID", () => {
