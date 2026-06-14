@@ -29,8 +29,9 @@ create table public.game_sessions (
   problem_id uuid not null references public.problems(id) on delete restrict,
   conversation_history jsonb not null default '[]'::jsonb,
   status text not null default 'in_progress' check (status in ('in_progress', 'solved', 'given_up')),
-  question_count integer not null default 0 check (question_count >= 0),
+  question_count integer not null default 0 check (question_count between 0 and 30),
   started_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '20 minutes'),
   completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

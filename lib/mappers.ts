@@ -28,6 +28,7 @@ export function mapSession(row: Row, includeSolution = false): GameSession {
     conversationHistory: (row.conversation_history ?? []) as ChatMessage[],
     questionCount: Number(row.question_count ?? 0),
     startedAt: String(row.started_at),
+    expiresAt: String(row.expires_at),
     completedAt: row.completed_at ? String(row.completed_at) : null,
     createdAt: String(row.created_at),
     problem: mapPublicProblem(problem),

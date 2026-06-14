@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Lightbulb, X } from "lucide-react";
 
 export function AnswerDialog({
   open,
@@ -41,8 +42,8 @@ export function AnswerDialog({
         />
         {error ? <p className="error-text mt-3 text-sm">{error}</p> : null}
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <button type="button" className="pixel-button ghost" onClick={onClose}>취소</button>
-          <button type="submit" className="pixel-button gold" disabled={loading || !answer.trim()}>{loading ? "판정 중..." : "정답 제출"}</button>
+          <button type="button" className="pixel-button ghost flex items-center justify-center gap-2" onClick={onClose}><X aria-hidden="true" size={18} />취소</button>
+          <button type="submit" className="pixel-button gold flex items-center justify-center gap-2" disabled={loading || !answer.trim()}><Lightbulb aria-hidden="true" size={18} />{loading ? "판정 중..." : "정답 제출"}</button>
         </div>
       </form>
     </dialog>

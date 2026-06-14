@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiErrorResponse } from "@/lib/api";
-import { assertInProgress, getOwnedSession } from "@/lib/game-service";
+import { assertSessionActive, getOwnedSession } from "@/lib/game-service";
 import { validatePlayerAnswer } from "@/lib/openai";
 import { answerSchema } from "@/lib/schemas";
 import { createServiceClient } from "@/lib/supabase";
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   try {
     const input = answerSchema.parse(await request.json());
     const session = await getOwnedSession(input.sessionId, input.deviceId);
-    assertInProgress(session);
+    assertSessionActive(session);
     const supabase = createServiceClient();
     const problemResult = await supabase
       .from("problems")

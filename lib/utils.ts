@@ -4,7 +4,13 @@ export const AI_ANSWER_LABELS: Record<AiAnswer, string> = {
   yes: "예",
   no: "아니오",
   irrelevant: "관련 없음",
+  invalid_question:
+    "질문은 [예/아니오/관련 없음]으로 대답할 수 있는 것만 가능합니다",
 };
+
+export function shouldCountQuestion(answer: AiAnswer) {
+  return answer !== "invalid_question";
+}
 
 export const STATUS_LABELS: Record<GameStatus, string> = {
   in_progress: "진행 중",

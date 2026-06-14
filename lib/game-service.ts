@@ -5,7 +5,7 @@ import type { GameSession } from "@/lib/types";
 
 const sessionSelect = `
   id, device_id, problem_id, status, conversation_history, question_count,
-  started_at, completed_at, created_at,
+  started_at, expires_at, completed_at, created_at,
   problem:problems(id, title, question, category, difficulty, created_at, answer, explanation)
 `;
 
@@ -29,6 +29,17 @@ export async function getOwnedSession(
 export function assertInProgress(session: GameSession) {
   if (session.status !== "in_progress") {
     throw new ApiError("이미 종료된 게임입니다.", 409);
+  }
+}
+
+export function isSessionExpired(session: Pick<GameSession, "expiresAt">, now = Date.now()) {
+  return new Date(session.expiresAt).getTime() <= now;
+}
+
+export function assertSessionActive(session: GameSession, now = Date.now()) {
+  assertInProgress(session);
+  if (isSessionExpired(session, now)) {
+    throw new ApiError("세션 시간이 만료되었습니다. 연장하거나 포기해주세요.", 409);
   }
 }
 

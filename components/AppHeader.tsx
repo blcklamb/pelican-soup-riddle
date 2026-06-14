@@ -1,15 +1,26 @@
 import Link from "next/link";
+import { ArrowLeft, Home } from "lucide-react";
 
-export function AppHeader({ backHref, label = "홈으로" }: { backHref?: string; label?: string }) {
+export function AppHeader({
+  backHref,
+  label = backHref ? "뒤로" : "홈으로",
+}: {
+  backHref?: string;
+  label?: string;
+}) {
   return (
     <header className="mb-9 flex items-center justify-between gap-4">
-      <Link className="pixel-button ghost !min-h-11 !px-4 !py-2 text-sm" href={backHref ?? "/"}>
-        {backHref ? "←" : "⌂"} {label}
+      <Link
+        className="pixel-button ghost flex min-h-11! items-center justify-center gap-2 px-4! py-2! text-sm"
+        href={backHref ?? "/"}
+      >
+        {backHref ? (
+          <ArrowLeft aria-hidden="true" size={18} />
+        ) : (
+          <Home aria-hidden="true" size={18} />
+        )}
+        {label}
       </Link>
-      <div className="text-right">
-        <p className="eyebrow">Turtle Soup AI</p>
-        <p className="text-sm font-bold text-white">심해 추리 통신</p>
-      </div>
     </header>
   );
 }

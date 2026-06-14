@@ -1,7 +1,12 @@
 export const GAME_STATUSES = ["in_progress", "solved", "given_up"] as const;
 export type GameStatus = (typeof GAME_STATUSES)[number];
 
-export const AI_ANSWERS = ["yes", "no", "irrelevant"] as const;
+export const AI_ANSWERS = [
+  "yes",
+  "no",
+  "irrelevant",
+  "invalid_question",
+] as const;
 export type AiAnswer = (typeof AI_ANSWERS)[number];
 
 export type MessageRole = "user" | "assistant";
@@ -37,6 +42,7 @@ export interface GameSession {
   conversationHistory: ChatMessage[];
   questionCount: number;
   startedAt: string;
+  expiresAt: string;
   completedAt: string | null;
   createdAt: string;
   problem: PublicProblem;
