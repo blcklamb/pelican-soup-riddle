@@ -18,6 +18,19 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
   given_up: "포기",
 };
 
+export const CATEGORY_LABELS: Record<string, string> = {
+  Paradox: "역설",
+  Weird: "기묘",
+  Logic: "논리",
+  Mystery: "미스터리",
+};
+
+export const DIFFICULTY_LABELS: Record<string, string> = {
+  Easy: "쉬움",
+  Medium: "보통",
+  Hard: "어려움",
+};
+
 export function formatDuration(startedAt: string, completedAt?: string | null) {
   const start = new Date(startedAt).getTime();
   const end = completedAt ? new Date(completedAt).getTime() : Date.now();

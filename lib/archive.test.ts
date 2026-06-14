@@ -8,7 +8,7 @@ function session(
   status: GameSession["status"],
   questionCount: number,
 ) {
-  return { id, createdAt, status, questionCount } as GameSession;
+  return { id, createdAt, status, questionCount, problem: { category: "Logic" } } as GameSession;
 }
 
 describe("archive summaries", () => {
@@ -33,6 +33,9 @@ describe("archive summaries", () => {
       solved: 2,
       givenUp: 1,
       averageQuestions: 5.5,
+      solveRate: 67,
+      maxStreak: 3,
+      categoryStats: [{ category: "Logic", played: 3, solved: 2 }],
     });
   });
 });

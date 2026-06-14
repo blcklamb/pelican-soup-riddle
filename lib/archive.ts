@@ -27,6 +27,23 @@ export function getArchiveStats(sessions: GameSession[]) {
     (sum, session) => sum + session.questionCount,
     0,
   );
+  const playedDates = [...new Set(groupSessionsByDate(sessions).map((group) => group.date))].sort();
+  let streak = playedDates.length ? 1 : 0;
+  let maxStreak = streak;
+  for (let index = 1; index < playedDates.length; index += 1) {
+    const previous = new Date(`${playedDates[index - 1]}T00:00:00+09:00`);
+    const current = new Date(`${playedDates[index]}T00:00:00+09:00`);
+    streak = current.getTime() - previous.getTime() === 86_400_000 ? streak + 1 : 1;
+    maxStreak = Math.max(maxStreak, streak);
+  }
+  const categoryStats = Object.entries(
+    sessions.reduce<Record<string, { played: number; solved: number }>>((result, session) => {
+      const category = session.problem.category;
+      const current = result[category] ?? { played: 0, solved: 0 };
+      result[category] = { played: current.played + 1, solved: current.solved + (session.status === "solved" ? 1 : 0) };
+      return result;
+    }, {}),
+  ).map(([category, value]) => ({ category, ...value }));
   return {
     total: sessions.length,
     solved: solved.length,
@@ -34,5 +51,8 @@ export function getArchiveStats(sessions: GameSession[]) {
     averageQuestions: solved.length
       ? Math.round((totalQuestions / solved.length) * 10) / 10
       : 0,
+    solveRate: sessions.length ? Math.round((solved.length / sessions.length) * 100) : 0,
+    maxStreak,
+    categoryStats,
   };
 }

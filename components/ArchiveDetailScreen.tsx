@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ConfigGate } from "@/components/ConfigGate";
 import { PixelPanel } from "@/components/PixelPanel";
+import { ProblemFeedbackForm } from "@/components/ProblemFeedbackForm";
 import { apiFetch } from "@/lib/client-api";
 import type { GameSession } from "@/lib/types";
 import { useDeviceId } from "@/lib/use-device-id";
@@ -89,6 +90,7 @@ function ArchiveDetail({ sessionId }: { sessionId: string }) {
             {formatDuration(session.startedAt, session.completedAt)}
           </span>
         </div>
+        <ProblemFeedbackForm sessionId={session.id} />
       </PixelPanel>
     </main>
   );
