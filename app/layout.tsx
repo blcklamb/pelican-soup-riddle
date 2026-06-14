@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppProviders } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -77,6 +78,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
