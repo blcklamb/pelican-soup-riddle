@@ -38,7 +38,11 @@ export function createDeviceId(
 
 export function getOrCreateDeviceId(): string {
   const stored = window.localStorage.getItem(DEVICE_KEY);
-  if (stored) return stored;
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+  if (stored && isUuid(stored)) return stored;
+  if (stored) window.localStorage.removeItem(DEVICE_KEY);
 
   const deviceId = createDeviceId(window.crypto);
   window.localStorage.setItem(DEVICE_KEY, deviceId);
