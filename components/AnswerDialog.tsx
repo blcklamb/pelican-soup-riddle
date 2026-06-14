@@ -27,10 +27,10 @@ export function AnswerDialog({
   }, [open]);
 
   return (
-    <dialog ref={ref} onCancel={onClose} className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-black/70">
+    <dialog ref={ref} aria-labelledby="answer-dialog-title" onCancel={onClose} className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-black/70">
       <form className="pixel-panel p-6 text-[#deded8]" onSubmit={(event) => { event.preventDefault(); onSubmit(answer); }}>
-        <p className="eyebrow mb-2">Final answer</p>
-        <h2 className="mb-4 text-xl font-bold">정답을 말해보세요</h2>
+        <p className="eyebrow mb-2">최종 추리</p>
+        <h2 id="answer-dialog-title" className="mb-4 text-xl font-bold">정답을 말해보세요</h2>
         <textarea
           autoFocus
           value={answer}

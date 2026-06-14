@@ -20,6 +20,7 @@ describe("SessionTimeoutDialog", () => {
         open
         extending={false}
         givingUp={false}
+        canExtend
         onExtend={onExtend}
         onGiveUp={onGiveUp}
       />,
@@ -38,6 +39,7 @@ describe("SessionTimeoutDialog", () => {
         open
         extending
         givingUp={false}
+        canExtend
         onExtend={vi.fn()}
         onGiveUp={vi.fn()}
       />,

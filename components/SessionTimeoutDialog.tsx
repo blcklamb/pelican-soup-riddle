@@ -10,6 +10,7 @@ export function SessionTimeoutDialog({
   error,
   onExtend,
   onGiveUp,
+  canExtend,
 }: {
   open: boolean;
   extending: boolean;
@@ -17,6 +18,7 @@ export function SessionTimeoutDialog({
   error?: string;
   onExtend: () => void;
   onGiveUp: () => void;
+  canExtend: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -31,6 +33,7 @@ export function SessionTimeoutDialog({
   return (
     <dialog
       ref={ref}
+      aria-labelledby="timeout-dialog-title"
       onCancel={(event) => event.preventDefault()}
       className="m-auto w-[min(92vw,440px)] rounded-none bg-transparent p-0 backdrop:bg-black/70"
     >
@@ -40,8 +43,8 @@ export function SessionTimeoutDialog({
           aria-hidden="true"
           size={40}
         />
-        <p className="eyebrow mb-2">Session timeout</p>
-        <h2 className="mb-3 text-xl font-bold">20분이 지났습니다</h2>
+        <p className="eyebrow mb-2">세션 만료</p>
+        <h2 id="timeout-dialog-title" className="mb-3 text-xl font-bold">20분이 지났습니다</h2>
         <p className="muted leading-7">
           계속 추리하려면 세션을 20분 연장하세요. 포기하면 정답과 해설이
           공개됩니다.
@@ -51,7 +54,7 @@ export function SessionTimeoutDialog({
           <button
             type="button"
             className="pixel-button flex items-center justify-center gap-2"
-            disabled={busy}
+            disabled={busy || !canExtend}
             onClick={onExtend}
           >
             <RefreshCw
@@ -59,7 +62,7 @@ export function SessionTimeoutDialog({
               aria-hidden="true"
               size={19}
             />
-            {extending ? "연장 중" : "20분 연장"}
+            {extending ? "연장 중" : canExtend ? "20분 연장" : "연장 사용 완료"}
           </button>
           <button
             type="button"
