@@ -10,6 +10,23 @@ export interface ScrapedProblemReference {
 const MIN_TEXT_LENGTH = 12;
 const MAX_REFERENCES_PER_SOURCE = 12;
 
+const BLOCKED_HOSTNAME_PATTERN =
+  /^(localhost|.*\.local|.*\.internal|.*\.intranet)$/i;
+
+function isInternalHost(hostname: string) {
+  if (BLOCKED_HOSTNAME_PATTERN.test(hostname)) return true;
+  const octets = hostname.split(".").map(Number);
+  if (octets.length !== 4 || octets.some(isNaN)) return false;
+  const [a, b] = octets;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
 export function parseScrapeSourceUrls(value = "") {
   return [
     ...new Set(
@@ -21,7 +38,8 @@ export function parseScrapeSourceUrls(value = "") {
   ].filter((url) => {
     try {
       const parsed = new URL(url);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+      return !isInternalHost(parsed.hostname);
     } catch {
       return false;
     }
