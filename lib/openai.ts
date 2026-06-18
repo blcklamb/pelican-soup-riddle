@@ -36,6 +36,13 @@ const problemReviewOutput = z.object({
 export type GeneratedProblem = z.infer<typeof generatedProblemOutput>;
 export type ProblemReview = z.infer<typeof problemReviewOutput>;
 
+export interface ProblemReference {
+  title: string;
+  question: string;
+  answer: string;
+  sourceUrl: string;
+}
+
 export function buildGameMasterPrompt(input: {
   question: string;
   answer: string;
@@ -66,10 +73,29 @@ export function buildGameMasterPrompt(input: {
 export function buildProblemGenerationPrompt(
   existingTitles: string[] = [],
   previousIssues: string[] = [],
+  references: ProblemReference[] = [],
 ) {
+  const referenceText = references.length
+    ? references
+        .slice(0, 6)
+        .map(
+          (reference, index) =>
+            [
+              `참고 ${index + 1}: ${reference.title}`,
+              `원문 상황: ${reference.question.slice(0, 500)}`,
+              `원문 정답: ${reference.answer.slice(0, 500)}`,
+              `출처: ${reference.sourceUrl}`,
+            ].join("\n"),
+        )
+        .join("\n\n")
+    : "사용할 웹 참고 문제가 없습니다.";
+
   return [
     "당신은 한국어 바다거북 스프 문제를 설계하고 검수하는 작가입니다.",
-    "완전히 새로운 문제 한 개만 작성하세요. 기존 유명 문제나 온라인 문제의 문장, 반전, 핵심 장치를 재사용하지 마세요.",
+    references.length
+      ? "아래 웹 참고 문제 중 하나를 소재 참고로 삼되, 원문 문장과 전개를 그대로 복제하지 말고 한국어 서비스에 맞게 재구성한 문제 한 개만 작성하세요."
+      : "완전히 새로운 문제 한 개만 작성하세요. 기존 유명 문제나 온라인 문제의 문장, 반전, 핵심 장치를 재사용하지 마세요.",
+    "웹 참고 문제를 사용할 때도 원문을 축약 복사하지 말고, 공개 상황·정답 설명·힌트를 자연스럽게 다시 쓰세요.",
     "처음에는 의문스럽지만 정답을 알면 모든 단서가 자연스럽게 설명되는 문제만 생성하세요.",
     "정답은 현실에서 실제로 일어날 수 있는 2~4단계의 명확한 인과관계를 가져야 합니다.",
     "문제 본문에 제시된 행동과 결과가 정답에서 빠짐없이 설명되어야 합니다.",
@@ -88,6 +114,7 @@ export function buildProblemGenerationPrompt(
     previousIssues.length
       ? `이전 생성안의 다음 문제를 모두 수정하세요: ${previousIssues.join(" / ")}`
       : "이전 생성안에 대한 수정 사항은 없습니다.",
+    `웹 참고 문제:\n${referenceText}`,
     "출력 필드: title, question, answer, explanation, answerKeywords, category, difficulty, hint1, hint2.",
   ].join("\n\n");
 }
@@ -95,10 +122,20 @@ export function buildProblemGenerationPrompt(
 export function buildProblemReviewPrompt(input: {
   candidate: GeneratedProblem;
   existingProblems: Array<{ title: string; question: string }>;
+  references?: ProblemReference[];
 }) {
   const existing = input.existingProblems.length
     ? input.existingProblems
         .map((problem) => `- ${problem.title}: ${problem.question.slice(0, 180)}`)
+        .join("\n")
+    : "없음";
+  const references = input.references?.length
+    ? input.references
+        .slice(0, 6)
+        .map(
+          (reference) =>
+            `- ${reference.title}: ${reference.question.slice(0, 180)} / ${reference.answer.slice(0, 180)} (${reference.sourceUrl})`,
+        )
         .join("\n")
     : "없음";
 
@@ -106,12 +143,14 @@ export function buildProblemReviewPrompt(input: {
     "당신은 한국어 바다거북 스프 문제의 엄격한 편집자입니다.",
     "후보 문제를 독립적으로 검수하고 approved, score, issues, summary를 반환하세요.",
     "다음 항목을 평가하세요: 공개 상황의 모든 단서가 정답으로 설명되는가, 핵심 인과관계가 현실적으로 필연적인가, 예/아니오 질문으로 풀 수 있는가, 억지 설정이나 우연에 의존하지 않는가, 기존 문제와 핵심 장치가 중복되지 않는가, 한국어가 자연스러운가, 비그래픽하고 서비스에 안전한가, 두 힌트가 정답을 직접 노출하지 않는가.",
+    "웹 참고 문제가 있는 경우 후보가 참고 원문을 그대로 베끼지 않고 서비스용으로 재구성되었는지도 평가하세요. 단, 핵심 반전이 참고 문제와 같다는 이유만으로는 중복 탈락시키지 말고 문장과 전개가 독립적인지 보세요.",
     "꿈·연극·영화·게임·가상 화면·말장난·사실은 사람이 아니었다는 재정의만으로 반전을 만든 경우 승인하지 마세요.",
     "본문에 단서가 없는 희귀 질환, 특수 직업, 비밀 규칙, 임의의 약속이나 소품이 정답의 핵심이면 승인하지 마세요.",
     "기존 문제와 제목만 다른 채 같은 반전 또는 인과 메커니즘을 사용하면 중복으로 판정하세요.",
     "approved는 score가 80 이상이고 치명적인 issue가 없을 때만 true입니다.",
     `후보 문제:\n${JSON.stringify(input.candidate, null, 2)}`,
     `기존 문제:\n${existing}`,
+    `웹 참고 문제:\n${references}`,
   ].join("\n\n");
 }
 
@@ -152,6 +191,7 @@ function client() {
 async function generateProblemCandidate(input: {
   existingTitles: string[];
   previousIssues: string[];
+  references?: ProblemReference[];
 }) {
   const env = getServerEnv();
   const response = await client().responses.parse({
@@ -159,6 +199,7 @@ async function generateProblemCandidate(input: {
     instructions: buildProblemGenerationPrompt(
       input.existingTitles,
       input.previousIssues,
+      input.references ?? [],
     ),
     input: "새로운 데일리 문제 한 개를 생성하세요.",
     text: { format: zodTextFormat(generatedProblemOutput, "daily_problem") },
@@ -174,6 +215,7 @@ async function generateProblemCandidate(input: {
 async function reviewProblemCandidate(input: {
   candidate: GeneratedProblem;
   existingProblems: Array<{ title: string; question: string }>;
+  references?: ProblemReference[];
 }) {
   const env = getServerEnv();
   const response = await client().responses.parse({
@@ -192,6 +234,7 @@ async function reviewProblemCandidate(input: {
 
 export async function generateReviewedProblem(input: {
   existingProblems: Array<{ title: string; question: string }>;
+  references?: ProblemReference[];
   maxAttempts?: number;
 }) {
   const maxAttempts = Math.max(1, Math.min(input.maxAttempts ?? 3, 5));
@@ -202,10 +245,12 @@ export async function generateReviewedProblem(input: {
     const candidate = await generateProblemCandidate({
       existingTitles: input.existingProblems.map((problem) => problem.title),
       previousIssues,
+      references: input.references ?? [],
     });
     const review = await reviewProblemCandidate({
       candidate,
       existingProblems: input.existingProblems,
+      references: input.references ?? [],
     });
 
     if (review.approved && review.score >= 80) {

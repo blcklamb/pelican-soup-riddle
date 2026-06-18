@@ -79,6 +79,20 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("핵심 인과관계가 약합니다.");
   });
 
+  it("passes web references into generation and review prompts", () => {
+    const reference = {
+      title: "웹 문제",
+      question: "한 남자가 방에 들어가자 모두가 박수를 쳤다.",
+      answer: "그는 공연자였고 관객이 등장을 보고 박수를 쳤다.",
+      sourceUrl: "https://example.com/turtle-soup",
+    };
+
+    const generationPrompt = buildProblemGenerationPrompt([], [], [reference]);
+    expect(generationPrompt).toContain("웹 참고 문제");
+    expect(generationPrompt).toContain("원문을 축약 복사하지 말고");
+    expect(generationPrompt).toContain("https://example.com/turtle-soup");
+  });
+
   it("requires an independent review score of at least 80", () => {
     const prompt = buildProblemReviewPrompt({
       candidate: {
@@ -96,10 +110,20 @@ describe("problem generation prompt", () => {
         hint2: "등장인물이 본 것과 실제 상황이 같았는지 살펴보세요.",
       },
       existingProblems: [{ title: "기존 문제", question: "기존 질문입니다." }],
+      references: [
+        {
+          title: "웹 문제",
+          question: "웹 질문입니다.",
+          answer: "웹 정답입니다.",
+          sourceUrl: "https://example.com/reference",
+        },
+      ],
     });
 
     expect(prompt).toContain("score가 80 이상");
     expect(prompt).toContain("핵심 장치가 중복");
     expect(prompt).toContain("기존 문제");
+    expect(prompt).toContain("서비스용으로 재구성");
+    expect(prompt).toContain("https://example.com/reference");
   });
 });
