@@ -15,8 +15,8 @@
 | POST | `/api/sessions/[sessionId]/extend` | 만료 세션 20분 연장 |
 | POST | `/api/sessions/[sessionId]/hint` | 질문 수 조건을 만족한 단계별 힌트 사용 |
 | POST | `/api/feedback` | 종료된 세션의 문제 평가 및 신고 저장 |
-| GET | `/api/cron/release-daily` | 오늘 예약 문제 공개 |
-| GET | `/api/cron/generate-weekly` | 28일 일정의 빈 날짜 생성 |
+| GET | `/api/cron/release-daily` | 다음 날짜 예약 문제 공개 |
+| GET | `/api/cron/generate-weekly` | 다음 월-일 7일 일정의 빈 날짜 생성 |
 | GET | `/api/cron/generate-daily` | 오늘/내일 긴급 보충 |
 
 Cron API는 `Authorization: Bearer $CRON_SECRET`이 필요합니다.

@@ -6,6 +6,7 @@ const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   OPENAI_API_KEY: z.string().min(1),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.4-mini"),
+  SCRAPE_SOURCE_URLS: z.string().default(""),
 });
 
 export function getServerEnv() {
@@ -15,6 +16,7 @@ export function getServerEnv() {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-5.4-mini",
+    SCRAPE_SOURCE_URLS: process.env.SCRAPE_SOURCE_URLS ?? "",
   });
 }
 
@@ -25,6 +27,7 @@ export function getMissingEnvKeys() {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-5.4-mini",
+    SCRAPE_SOURCE_URLS: process.env.SCRAPE_SOURCE_URLS ?? "",
   });
 
   if (result.success) return [];

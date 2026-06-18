@@ -1,15 +1,19 @@
 # Troubleshooting
 
-## 오늘 문제가 바뀌지 않음
+## 내일 문제가 미리 공개되지 않음
 
 1. Vercel Cron Jobs에서 `/api/cron/release-daily` 실행 기록 확인
-2. `daily_releases`에 오늘 한국 날짜 행이 있는지 확인
+2. `daily_releases`에 다음 한국 날짜 행이 있는지 확인
 3. 해당 행의 `is_released` 확인
 4. 인증된 Cron URL을 수동 호출
 
-## 28일 일정이 채워지지 않음
+## 다음 7일 일정이 채워지지 않음
 
 `problem_generation_runs`에서 `failed` 행의 `message`를 확인합니다. OpenAI quota, timeout, 품질 검수 실패가 주요 원인입니다. 문제를 해결한 뒤 `/api/cron/generate-weekly`를 다시 호출하면 빈 날짜만 보충합니다.
+
+## 웹 수집 문제가 생성되지 않음
+
+`SCRAPE_SOURCE_URLS`가 Production 환경에 설정되어 있는지 확인합니다. 각 URL은 공개 접근 가능한 HTML이어야 하며, 현재 추출기는 `문제:`/`정답:` 또는 `Q:`/`A:` 형식의 텍스트를 우선 수집합니다. URL 접근 실패나 후보 부족 시 자동으로 AI 신규 생성으로 fallback합니다.
 
 ## Cron 401
 

@@ -4,10 +4,16 @@ import {
   getCalendarDateRange,
   getKoreanDate,
 } from "@/lib/korean-date";
+import {
+  fetchScrapedProblemReferences,
+  parseScrapeSourceUrls,
+  type ScrapedProblemReference,
+} from "@/lib/problem-scraping";
 import { createServiceClient } from "@/lib/supabase";
 
 export const SCHEDULE_HORIZON_DAYS = 28;
-const GENERATION_CONCURRENCY = 3;
+export const WEEKLY_GENERATION_DAYS = 7;
+const GENERATION_CONCURRENCY = 1;
 
 export type GeneratedDateResult =
   | {
@@ -17,6 +23,9 @@ export type GeneratedDateResult =
       title: string;
       attempts: number;
       reviewScore: number;
+      source: "AI" | "Web";
+      sourceUrl: string | null;
+      usedScrapedReference: boolean;
     }
   | { status: "running"; targetDate: string }
   | { status: "failed"; targetDate: string; error: string };
@@ -55,6 +64,26 @@ export function getMissingScheduleDates(
   );
 }
 
+export function getWeeklyGenerationStartDate(now = new Date()) {
+  return addCalendarDays(getKoreanDate(now), 1);
+}
+
+export function getReleaseTargetDate(now = new Date()) {
+  return addCalendarDays(getKoreanDate(now), 1);
+}
+
+function rotateReferences(
+  references: ScrapedProblemReference[],
+  offset: number,
+) {
+  if (references.length === 0) return references;
+  const normalizedOffset = offset % references.length;
+  return [
+    ...references.slice(normalizedOffset),
+    ...references.slice(0, normalizedOffset),
+  ];
+}
+
 async function markStaleRunFailed(targetDate: string, now: Date) {
   const staleBefore = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
   const { error } = await createServiceClient()
@@ -73,6 +102,7 @@ async function markStaleRunFailed(targetDate: string, now: Date) {
 export async function generateProblemForDate(
   targetDate: string,
   now = new Date(),
+  references: ScrapedProblemReference[] = [],
 ): Promise<GeneratedDateResult> {
   const supabase = createServiceClient();
   const today = getKoreanDate(now);
@@ -97,14 +127,17 @@ export async function generateProblemForDate(
       .limit(300);
     if (existingResult.error) throw existingResult.error;
 
+    const sourceReference = references[0] ?? null;
     const generated = await generateReviewedProblem({
       existingProblems: (existingResult.data ?? []).map((problem) => ({
         title: String(problem.title),
         question: String(problem.question),
       })),
+      references: sourceReference ? [sourceReference] : [],
       maxAttempts: 3,
     });
     const candidate = generated.candidate;
+    const source = sourceReference ? "Web" : "AI";
     const publishResult = await supabase.rpc("publish_generated_daily_problem", {
       p_release_date: targetDate,
       p_title: candidate.title,
@@ -114,6 +147,8 @@ export async function generateProblemForDate(
       p_answer_keywords: candidate.answerKeywords,
       p_category: candidate.category,
       p_difficulty: candidate.difficulty,
+      p_source: source,
+      p_source_url: sourceReference?.sourceUrl ?? "",
       p_is_released: targetDate <= today,
       p_hint_1: candidate.hint1,
       p_hint_2: candidate.hint2,
@@ -141,6 +176,9 @@ export async function generateProblemForDate(
       title: candidate.title,
       attempts: generated.attempts,
       reviewScore: generated.review.score,
+      source,
+      sourceUrl: sourceReference?.sourceUrl ?? null,
+      usedScrapedReference: Boolean(sourceReference),
     };
   } catch (error) {
     const message = errorMessage(error);
@@ -162,6 +200,8 @@ export async function fillProblemSchedule(input?: {
   days?: number;
   maxGenerate?: number;
   now?: Date;
+  references?: ScrapedProblemReference[];
+  scrapeSourceUrls?: string[];
 }): Promise<ScheduleGenerationResult> {
   const now = input?.now ?? new Date();
   const startDate = input?.startDate ?? getKoreanDate(now);
@@ -180,14 +220,20 @@ export async function fillProblemSchedule(input?: {
     days,
     (scheduleResult.data ?? []).map((row) => String(row.release_date)),
   ).slice(0, maxGenerate);
+  const configuredUrls =
+    input?.scrapeSourceUrls ?? parseScrapeSourceUrls(process.env.SCRAPE_SOURCE_URLS ?? "");
+  const scrapedReferences =
+    input?.references ??
+    (configuredUrls.length ? await fetchScrapedProblemReferences(configuredUrls) : []);
   const results: GeneratedDateResult[] = [];
   let nextIndex = 0;
 
   async function worker() {
     while (nextIndex < missingDates.length) {
       const targetDate = missingDates[nextIndex];
+      const references = rotateReferences(scrapedReferences, nextIndex);
       nextIndex += 1;
-      results.push(await generateProblemForDate(targetDate, now));
+      results.push(await generateProblemForDate(targetDate, now, references));
     }
   }
 
@@ -209,7 +255,7 @@ export async function fillProblemSchedule(input?: {
 }
 
 export async function releaseDailyProblem(now = new Date()) {
-  const releaseDate = getKoreanDate(now);
+  const releaseDate = getReleaseTargetDate(now);
   const result = await createServiceClient().rpc(
     "release_scheduled_daily_problem",
     { p_release_date: releaseDate },

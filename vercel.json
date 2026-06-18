@@ -3,11 +3,11 @@
   "crons": [
     {
       "path": "/api/cron/release-daily",
-      "schedule": "0 15 * * *"
+      "schedule": "30 14 * * *"
     },
     {
       "path": "/api/cron/generate-weekly",
-      "schedule": "10 15 * * 0"
+      "schedule": "0 6 * * 0"
     }
   ]
 }
