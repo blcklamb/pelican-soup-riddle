@@ -127,16 +127,16 @@ export async function generateProblemForDate(
       .limit(300);
     if (existingResult.error) throw existingResult.error;
 
+    const sourceReference = references[0] ?? null;
     const generated = await generateReviewedProblem({
       existingProblems: (existingResult.data ?? []).map((problem) => ({
         title: String(problem.title),
         question: String(problem.question),
       })),
-      references,
+      references: sourceReference ? [sourceReference] : [],
       maxAttempts: 3,
     });
     const candidate = generated.candidate;
-    const sourceReference = references[0] ?? null;
     const source = sourceReference ? "Web" : "AI";
     const publishResult = await supabase.rpc("publish_generated_daily_problem", {
       p_release_date: targetDate,
