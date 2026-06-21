@@ -14,6 +14,8 @@ import { createServiceClient } from "@/lib/supabase";
 export const SCHEDULE_HORIZON_DAYS = 28;
 export const WEEKLY_GENERATION_DAYS = 7;
 const GENERATION_CONCURRENCY = 1;
+export const MISSING_WEB_REFERENCE_MESSAGE =
+  "웹 참고 문제가 없어 데일리 문제를 생성하지 않았습니다. SCRAPE_SOURCE_URLS에 공개 바다거북 스프 출처를 설정하세요.";
 
 export type GeneratedDateResult =
   | {
@@ -84,6 +86,14 @@ function rotateReferences(
   ];
 }
 
+export function requireWebReference(references: ScrapedProblemReference[]) {
+  const sourceReference = references[0] ?? null;
+  if (!sourceReference) {
+    throw new Error(MISSING_WEB_REFERENCE_MESSAGE);
+  }
+  return sourceReference;
+}
+
 async function markStaleRunFailed(targetDate: string, now: Date) {
   const staleBefore = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
   const { error } = await createServiceClient()
@@ -127,17 +137,16 @@ export async function generateProblemForDate(
       .limit(300);
     if (existingResult.error) throw existingResult.error;
 
-    const sourceReference = references[0] ?? null;
+    const sourceReference = requireWebReference(references);
     const generated = await generateReviewedProblem({
       existingProblems: (existingResult.data ?? []).map((problem) => ({
         title: String(problem.title),
         question: String(problem.question),
       })),
-      references: sourceReference ? [sourceReference] : [],
+      references: [sourceReference],
       maxAttempts: 3,
     });
     const candidate = generated.candidate;
-    const source = sourceReference ? "Web" : "AI";
     const publishResult = await supabase.rpc("publish_generated_daily_problem", {
       p_release_date: targetDate,
       p_title: candidate.title,
@@ -147,8 +156,8 @@ export async function generateProblemForDate(
       p_answer_keywords: candidate.answerKeywords,
       p_category: candidate.category,
       p_difficulty: candidate.difficulty,
-      p_source: source,
-      p_source_url: sourceReference?.sourceUrl ?? "",
+      p_source: "Web",
+      p_source_url: sourceReference.sourceUrl,
       p_is_released: targetDate <= today,
       p_hint_1: candidate.hint1,
       p_hint_2: candidate.hint2,
@@ -176,9 +185,9 @@ export async function generateProblemForDate(
       title: candidate.title,
       attempts: generated.attempts,
       reviewScore: generated.review.score,
-      source,
-      sourceUrl: sourceReference?.sourceUrl ?? null,
-      usedScrapedReference: Boolean(sourceReference),
+      source: "Web",
+      sourceUrl: sourceReference.sourceUrl,
+      usedScrapedReference: true,
     };
   } catch (error) {
     const message = errorMessage(error);

@@ -9,9 +9,29 @@ export interface ScrapedProblemReference {
 
 const MIN_TEXT_LENGTH = 12;
 const MAX_REFERENCES_PER_SOURCE = 12;
+const PUZZLING_API_PAGE_SIZE = 40;
 
 const BLOCKED_HOSTNAME_PATTERN =
   /^(localhost|.*\.local|.*\.internal|.*\.intranet)$/i;
+const PUZZLING_HOSTNAME = "puzzling.stackexchange.com";
+const BLOCKED_PUZZLING_TAGS = new Set([
+  "calculation-puzzle",
+  "chess",
+  "cipher",
+  "code",
+  "cryptography",
+  "geometry",
+  "mathematics",
+  "number-sequence",
+  "pattern",
+  "rebus",
+  "sequence",
+  "word",
+]);
+const BLOCKED_PUZZLING_TEXT =
+  /\b(equation|sequence|solve for|find the letters?|missing letters?|wordsearch|roman numerals?|chess|geometry|number sequence|decode)\b/i;
+const NARRATIVE_PUZZLING_TEXT =
+  /\b(why|how|what happened|what has happened|what was|who|where|dies?|died|survive|survived|killed|murder|hotel|pilot|doctor|guard|wife|man|woman|room|door|bridge|store|train|flight|plane)\b/i;
 
 function isInternalHost(hostname: string) {
   if (BLOCKED_HOSTNAME_PATTERN.test(hostname)) return true;
@@ -50,6 +70,10 @@ function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function textFromHtml(html: string) {
+  return normalizeText(cheerio.load(html).text());
+}
+
 function stripMarker(text: string, markers: RegExp[]) {
   let value = normalizeText(text);
   for (const marker of markers) {
@@ -64,6 +88,167 @@ function isQuestionLine(text: string) {
 
 function isAnswerLine(text: string) {
   return /^(정답|답|해답|A\.?|Answer|Solution)\s*[:：-]/i.test(text);
+}
+
+function isPuzzlingStackExchangeSource(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== PUZZLING_HOSTNAME) return false;
+    return /^\/questions\/tagged\/lateral-thinking\/?$/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function stackExchangeApiUrl(path: string, params: Record<string, string | number>) {
+  const url = new URL(`https://api.stackexchange.com/2.3/${path}`);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+}
+
+type StackExchangeQuestion = {
+  accepted_answer_id?: number;
+  answer_count?: number;
+  body?: string;
+  is_answered?: boolean;
+  link?: string;
+  question_id: number;
+  tags?: string[];
+  title?: string;
+};
+
+type StackExchangeAnswer = {
+  answer_id: number;
+  body?: string;
+  is_accepted?: boolean;
+  question_id: number;
+  score?: number;
+};
+
+type StackExchangeResponse<T> = {
+  items?: T[];
+};
+
+function isNarrativePuzzlingQuestion(question: StackExchangeQuestion) {
+  const tags = question.tags ?? [];
+  if (tags.some((tag) => BLOCKED_PUZZLING_TAGS.has(tag))) return false;
+
+  const title = textFromHtml(question.title ?? "");
+  const body = textFromHtml(question.body ?? "");
+  const combined = `${title} ${body}`;
+  if (BLOCKED_PUZZLING_TEXT.test(combined)) return false;
+  if (!NARRATIVE_PUZZLING_TEXT.test(combined)) return false;
+  if (/<img\b/i.test(question.body ?? "") && body.length < 240) return false;
+  return Boolean(question.is_answered && question.answer_count && question.link);
+}
+
+function chooseAnswerForQuestion(
+  question: StackExchangeQuestion,
+  answersByQuestionId: Map<number, StackExchangeAnswer[]>,
+) {
+  const answers = answersByQuestionId.get(question.question_id) ?? [];
+  return (
+    answers.find((answer) => answer.answer_id === question.accepted_answer_id) ??
+    answers[0] ??
+    null
+  );
+}
+
+export function extractPuzzlingStackExchangeReferences(
+  questions: StackExchangeQuestion[],
+  answers: StackExchangeAnswer[],
+): ScrapedProblemReference[] {
+  const answersByQuestionId = new Map<number, StackExchangeAnswer[]>();
+  for (const answer of answers) {
+    const current = answersByQuestionId.get(answer.question_id) ?? [];
+    current.push(answer);
+    current.sort((a, b) => {
+      if (a.is_accepted !== b.is_accepted) return a.is_accepted ? -1 : 1;
+      return Number(b.score ?? 0) - Number(a.score ?? 0);
+    });
+    answersByQuestionId.set(answer.question_id, current);
+  }
+
+  const references: ScrapedProblemReference[] = [];
+  for (const question of questions) {
+    if (!isNarrativePuzzlingQuestion(question)) continue;
+    const answer = chooseAnswerForQuestion(question, answersByQuestionId);
+    if (!answer) continue;
+
+    const title = textFromHtml(question.title ?? "");
+    const questionText = textFromHtml(question.body ?? "");
+    const answerText = textFromHtml(answer.body ?? "");
+    if (
+      title.length < 2 ||
+      questionText.length < MIN_TEXT_LENGTH ||
+      answerText.length < MIN_TEXT_LENGTH ||
+      !question.link
+    ) {
+      continue;
+    }
+
+    references.push({
+      title: title.slice(0, 80),
+      question: questionText,
+      answer: answerText,
+      sourceUrl: question.link,
+    });
+    if (references.length >= MAX_REFERENCES_PER_SOURCE) break;
+  }
+  return references;
+}
+
+export async function fetchPuzzlingStackExchangeReferences(
+  fetcher: typeof fetch = fetch,
+) {
+  const questionResponse = await fetcher(
+    stackExchangeApiUrl("questions", {
+      order: "desc",
+      sort: "votes",
+      tagged: "lateral-thinking",
+      site: "puzzling",
+      pagesize: PUZZLING_API_PAGE_SIZE,
+      filter: "withbody",
+    }),
+    {
+      headers: {
+        "user-agent": "pelican-soup-riddle/1.0 problem-curation",
+        accept: "application/json",
+      },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+  if (!questionResponse.ok) return [];
+
+  const questionPayload = (await questionResponse.json()) as StackExchangeResponse<StackExchangeQuestion>;
+  const questions = questionPayload.items ?? [];
+  const answeredQuestionIds = questions
+    .filter((question) => isNarrativePuzzlingQuestion(question))
+    .map((question) => question.question_id);
+  if (answeredQuestionIds.length === 0) return [];
+
+  const answerResponse = await fetcher(
+    stackExchangeApiUrl(`questions/${answeredQuestionIds.join(";")}/answers`, {
+      order: "desc",
+      sort: "votes",
+      site: "puzzling",
+      pagesize: 100,
+      filter: "withbody",
+    }),
+    {
+      headers: {
+        "user-agent": "pelican-soup-riddle/1.0 problem-curation",
+        accept: "application/json",
+      },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+  if (!answerResponse.ok) return [];
+
+  const answerPayload = (await answerResponse.json()) as StackExchangeResponse<StackExchangeAnswer>;
+  return extractPuzzlingStackExchangeReferences(questions, answerPayload.items ?? []);
 }
 
 export function extractProblemReferencesFromHtml(
@@ -128,6 +313,11 @@ export async function fetchScrapedProblemReferences(
 
   for (const url of urls) {
     try {
+      if (isPuzzlingStackExchangeSource(url)) {
+        references.push(...(await fetchPuzzlingStackExchangeReferences(fetcher)));
+        continue;
+      }
+
       const response = await fetcher(url, {
         headers: {
           "user-agent": "pelican-soup-riddle/1.0 problem-curation",

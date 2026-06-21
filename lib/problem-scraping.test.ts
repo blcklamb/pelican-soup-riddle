@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  extractPuzzlingStackExchangeReferences,
   extractProblemReferencesFromHtml,
   fetchScrapedProblemReferences,
   parseScrapeSourceUrls,
@@ -41,6 +42,60 @@ describe("extractProblemReferencesFromHtml", () => {
   });
 });
 
+describe("extractPuzzlingStackExchangeReferences", () => {
+  it("keeps accepted narrative lateral-thinking questions and rejects pattern/math items", () => {
+    const references = extractPuzzlingStackExchangeReferences(
+      [
+        {
+          question_id: 1,
+          accepted_answer_id: 10,
+          answer_count: 2,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "Guard gets fired after saving CEO's life",
+          link: "https://puzzling.stackexchange.com/questions/1/guard",
+          body: "<p>A guard saves a CEO from a flight, then gets fired. Why?</p>",
+        },
+        {
+          question_id: 2,
+          accepted_answer_id: 20,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["pattern", "lateral-thinking"],
+          title: "Find the letters",
+          link: "https://puzzling.stackexchange.com/questions/2/pattern",
+          body: "<p>Find the missing letters in this sequence.</p>",
+        },
+      ],
+      [
+        {
+          answer_id: 10,
+          question_id: 1,
+          is_accepted: true,
+          score: 5,
+          body: "<p>He knew because he dreamed it while sleeping on duty.</p>",
+        },
+        {
+          answer_id: 20,
+          question_id: 2,
+          is_accepted: true,
+          score: 10,
+          body: "<p>The answer is a letter pattern.</p>",
+        },
+      ],
+    );
+
+    expect(references).toEqual([
+      {
+        title: "Guard gets fired after saving CEO's life",
+        question: "A guard saves a CEO from a flight, then gets fired. Why?",
+        answer: "He knew because he dreamed it while sleeping on duty.",
+        sourceUrl: "https://puzzling.stackexchange.com/questions/1/guard",
+      },
+    ]);
+  });
+});
+
 describe("fetchScrapedProblemReferences", () => {
   it("passes source urls through fetched references and skips failures", async () => {
     const fetcher = vi
@@ -60,5 +115,89 @@ describe("fetchScrapedProblemReferences", () => {
 
     expect(references).toHaveLength(1);
     expect(references[0]?.sourceUrl).toBe("https://example.com/ok");
+  });
+
+  it("uses the Puzzling Stack Exchange API adapter for lateral-thinking tag pages", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                question_id: 31761,
+                accepted_answer_id: 31762,
+                answer_count: 1,
+                is_answered: true,
+                tags: ["lateral-thinking"],
+                title: "Guard gets fired after saving CEO's life",
+                link: "https://puzzling.stackexchange.com/questions/31761/guard-gets-fired-after-saving-ceos-life",
+                body: "<p>A guard saves the CEO and is fired. Why?</p>",
+              },
+            ],
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                answer_id: 31762,
+                question_id: 31761,
+                is_accepted: true,
+                score: 1,
+                body: "<p>The guard dreamed it, so he slept during the night shift.</p>",
+              },
+            ],
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      );
+
+    const references = await fetchScrapedProblemReferences(
+      ["https://puzzling.stackexchange.com/questions/tagged/lateral-thinking"],
+      fetcher,
+    );
+
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      "api.stackexchange.com/2.3/questions",
+    );
+    expect(String(fetcher.mock.calls[1]?.[0])).toContain(
+      "api.stackexchange.com/2.3/questions/31761/answers",
+    );
+    expect(references).toEqual([
+      {
+        title: "Guard gets fired after saving CEO's life",
+        question: "A guard saves the CEO and is fired. Why?",
+        answer: "The guard dreamed it, so he slept during the night shift.",
+        sourceUrl:
+          "https://puzzling.stackexchange.com/questions/31761/guard-gets-fired-after-saving-ceos-life",
+      },
+    ]);
+  });
+
+  it("does not use the API adapter for non lateral-thinking Puzzling URLs", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response("<html><body></body></html>", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+
+    await fetchScrapedProblemReferences(
+      ["https://puzzling.stackexchange.com/questions/31761/guard"],
+      fetcher,
+    );
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe(
+      "https://puzzling.stackexchange.com/questions/31761/guard",
+    );
+    expect(String(fetcher.mock.calls[0]?.[0])).not.toContain(
+      "api.stackexchange.com",
+    );
   });
 });

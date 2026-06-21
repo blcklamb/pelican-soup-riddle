@@ -70,7 +70,7 @@ npm run build
 - 동일 날짜 중복 실행과 15분 이상 멈춘 실행 자동 처리
 - 생성 및 실패 이력은 `problem_generation_runs` 테이블에 기록
 - 공개 전 문제는 `is_released=false` 상태로 보관되어 사용자 API에서 조회 불가
-- 웹 수집 실패 또는 후보 부족 시 기존 AI 신규 생성으로 자동 fallback
+- 웹 수집 실패 또는 후보 부족 시 AI 순수 창작으로 fallback하지 않고 실패 이력을 남김
 
 Vercel 프로젝트의 Production 환경에 16자 이상의 임의 문자열로 `CRON_SECRET`을 설정해야 합니다. Vercel은 이 값을 Cron 요청의 `Authorization: Bearer ...` 헤더로 자동 전송합니다.
 
