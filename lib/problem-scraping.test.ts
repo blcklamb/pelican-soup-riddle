@@ -181,6 +181,34 @@ describe("extractPuzzlingStackExchangeReferences", () => {
       },
     ]);
   });
+
+  it("rejects answers that hinge on how a word is pronounced", () => {
+    const references = extractPuzzlingStackExchangeReferences(
+      [
+        {
+          question_id: 7,
+          accepted_answer_id: 70,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "The strange phone call",
+          link: "https://puzzling.stackexchange.com/questions/7/call",
+          body: "<p>A man heard one word on the phone and immediately drove to the hospital. Why?</p>",
+        },
+      ],
+      [
+        {
+          answer_id: 70,
+          question_id: 7,
+          is_accepted: true,
+          score: 10,
+          body: "<p>The word is pronounced the same as another, so he misheard the message.</p>",
+        },
+      ],
+    );
+
+    expect(references).toEqual([]);
+  });
 });
 
 describe("fetchScrapedProblemReferences", () => {

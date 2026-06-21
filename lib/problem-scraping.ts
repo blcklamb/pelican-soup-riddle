@@ -36,7 +36,7 @@ const BLOCKED_PUZZLING_TAGS = new Set([
 const BLOCKED_PUZZLING_TEXT =
   /\b(equation|sequence|solve for|find the letters?|missing letters?|wordsearch|roman numerals?|chess|geometry|number sequence|decode)\b/i;
 const BLOCKED_LOCALIZED_PUZZLING_TEXT =
-  /\b(shoot|shot|photographer|photo|camera|pun|homophone|wordplay|sounds? like|pronounc|spelling|letters?|alphabet|anagram|acronym|initials?|consecutive letters?|translate|translation|german|french|spanish|scrabble|nato|phonetic alphabet|military alphabet|http status|status code|hexadecimal|\bhex\b|card game|playing cards?|poker|hearts|spades|clubs|diamonds|bicycle brand|monopoly|model airplane|toy airplane|remote-?controlled|rc plane|glider|stall speed|foucault|photosensitive|epilepsy)\b/i;
+  /\b(shoot|shot|photographer|photo|camera|pun|homophone|wordplay|sounds? like|pronoun\w*|pronunc\w*|spelling|letters?|alphabet|anagram|acronym|initials?|consecutive letters?|translate|translation|german|french|spanish|scrabble|nato|phonetic alphabet|military alphabet|http status|status code|hexadecimal|\bhex\b|card game|playing cards?|poker|hearts|spades|clubs|diamonds|bicycle brand|monopoly|model airplane|toy airplane|remote-?controlled|rc plane|glider|stall speed|foucault|photosensitive|epilepsy)\b/i;
 const NARRATIVE_PUZZLING_TEXT =
   /\b(why|how|what happened|what has happened|what was|who|where|dies?|died|survive|survived|killed|murder|hotel|pilot|doctor|guard|wife|man|woman|room|door|bridge|store|train|flight|plane)\b/i;
 
