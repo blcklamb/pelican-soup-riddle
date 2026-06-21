@@ -15,6 +15,9 @@ const BLOCKED_HOSTNAME_PATTERN =
   /^(localhost|.*\.local|.*\.internal|.*\.intranet)$/i;
 const PUZZLING_HOSTNAME = "puzzling.stackexchange.com";
 const BLOCKED_PUZZLING_TAGS = new Set([
+  "anagram",
+  "board-games",
+  "cards",
   "calculation-puzzle",
   "chess",
   "cipher",
@@ -26,10 +29,14 @@ const BLOCKED_PUZZLING_TAGS = new Set([
   "pattern",
   "rebus",
   "sequence",
+  "sports",
   "word",
+  "wordplay",
 ]);
 const BLOCKED_PUZZLING_TEXT =
   /\b(equation|sequence|solve for|find the letters?|missing letters?|wordsearch|roman numerals?|chess|geometry|number sequence|decode)\b/i;
+const BLOCKED_LOCALIZED_PUZZLING_TEXT =
+  /\b(shoot|shot|photographer|photo|camera|pun|homophone|wordplay|sounds? like|pronounc|spelling|letters?|alphabet|anagram|acronym|initials?|consecutive letters?|translate|translation|german|french|spanish|scrabble|nato|phonetic alphabet|military alphabet|http status|status code|hexadecimal|\bhex\b|card game|playing cards?|poker|hearts|spades|clubs|diamonds|bicycle brand|monopoly|model airplane|toy airplane|remote-?controlled|rc plane|glider|stall speed|foucault|photosensitive|epilepsy)\b/i;
 const NARRATIVE_PUZZLING_TEXT =
   /\b(why|how|what happened|what has happened|what was|who|where|dies?|died|survive|survived|killed|murder|hotel|pilot|doctor|guard|wife|man|woman|room|door|bridge|store|train|flight|plane)\b/i;
 
@@ -139,9 +146,17 @@ function isNarrativePuzzlingQuestion(question: StackExchangeQuestion) {
   const body = textFromHtml(question.body ?? "");
   const combined = `${title} ${body}`;
   if (BLOCKED_PUZZLING_TEXT.test(combined)) return false;
+  if (BLOCKED_LOCALIZED_PUZZLING_TEXT.test(combined)) return false;
   if (!NARRATIVE_PUZZLING_TEXT.test(combined)) return false;
   if (/<img\b/i.test(question.body ?? "") && body.length < 240) return false;
   return Boolean(question.is_answered && question.answer_count && question.link);
+}
+
+function hasBlockedPuzzlingReferenceContent(text: string) {
+  return (
+    BLOCKED_PUZZLING_TEXT.test(text) ||
+    BLOCKED_LOCALIZED_PUZZLING_TEXT.test(text)
+  );
 }
 
 function chooseAnswerForQuestion(
@@ -180,6 +195,9 @@ export function extractPuzzlingStackExchangeReferences(
     const title = textFromHtml(question.title ?? "");
     const questionText = textFromHtml(question.body ?? "");
     const answerText = textFromHtml(answer.body ?? "");
+    if (hasBlockedPuzzlingReferenceContent(`${title} ${questionText} ${answerText}`)) {
+      continue;
+    }
     if (
       title.length < 2 ||
       questionText.length < MIN_TEXT_LENGTH ||

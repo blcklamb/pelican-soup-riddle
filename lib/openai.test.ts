@@ -65,6 +65,10 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("가상 화면");
     expect(prompt).toContain("임의의 규칙");
     expect(prompt).toContain("2~4단계의 명확한 인과관계");
+    expect(prompt).toContain("shoot/shot");
+    expect(prompt).toContain("NATO 음성 알파벳");
+    expect(prompt).toContain("HTTP 상태 코드");
+    expect(prompt).toContain("카드게임 하트");
     expect(prompt).toContain("기존 문제");
   });
 
@@ -135,6 +139,9 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("기존 문제");
     expect(prompt).toContain("서비스용으로 재구성");
     expect(prompt).toContain("black stories 상용 카드");
+    expect(prompt).toContain("Scrabble");
+    expect(prompt).toContain("Monopoly");
+    expect(prompt).toContain("한국어 문제로 부적합");
     expect(prompt).toContain("https://example.com/reference");
   });
 });

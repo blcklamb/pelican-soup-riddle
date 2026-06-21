@@ -94,6 +94,93 @@ describe("extractPuzzlingStackExchangeReferences", () => {
       },
     ]);
   });
+
+  it("rejects translation-dependent, external-rule, and scale-redefinition answers", () => {
+    const references = extractPuzzlingStackExchangeReferences(
+      [
+        {
+          question_id: 3,
+          accepted_answer_id: 30,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "My strange hotel room neighbours",
+          link: "https://puzzling.stackexchange.com/questions/3/hotel",
+          body: "<p>A family in a hotel takes the lift down but walks up ten floors after dinner. Why?</p>",
+        },
+        {
+          question_id: 4,
+          accepted_answer_id: 40,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "Friends met up at the bar",
+          link: "https://puzzling.stackexchange.com/questions/4/shot",
+          body: "<p>A man said he shot his family and dog, but nobody was worried. Why?</p>",
+        },
+        {
+          question_id: 5,
+          accepted_answer_id: 50,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "A loving marriage?",
+          link: "https://puzzling.stackexchange.com/questions/5/hearts",
+          body: "<p>The heartless man threw down his shovel as his wife fell. Why?</p>",
+        },
+        {
+          question_id: 6,
+          accepted_answer_id: 60,
+          answer_count: 1,
+          is_answered: true,
+          tags: ["lateral-thinking"],
+          title: "How did the pilot survive the crash?",
+          link: "https://puzzling.stackexchange.com/questions/6/pilot",
+          body: "<p>A pilot's plane crashed and disintegrated, but the pilot walked away. Why?</p>",
+        },
+      ],
+      [
+        {
+          answer_id: 30,
+          question_id: 3,
+          is_accepted: true,
+          score: 10,
+          body: "<p>The parents wanted to tire the children out so they would sleep.</p>",
+        },
+        {
+          answer_id: 40,
+          question_id: 4,
+          is_accepted: true,
+          score: 10,
+          body: "<p>He was a photographer, so he shot photos with a camera.</p>",
+        },
+        {
+          answer_id: 50,
+          question_id: 5,
+          is_accepted: true,
+          score: 10,
+          body: "<p>They were playing the card game Hearts, and he had only spades.</p>",
+        },
+        {
+          answer_id: 60,
+          question_id: 6,
+          is_accepted: true,
+          score: 10,
+          body: "<p>It was a model airplane, so the pilot was never inside it.</p>",
+        },
+      ],
+    );
+
+    expect(references).toEqual([
+      {
+        title: "My strange hotel room neighbours",
+        question:
+          "A family in a hotel takes the lift down but walks up ten floors after dinner. Why?",
+        answer: "The parents wanted to tire the children out so they would sleep.",
+        sourceUrl: "https://puzzling.stackexchange.com/questions/3/hotel",
+      },
+    ]);
+  });
 });
 
 describe("fetchScrapedProblemReferences", () => {
