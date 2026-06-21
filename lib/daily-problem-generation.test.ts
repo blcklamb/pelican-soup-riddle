@@ -4,6 +4,8 @@ import {
   getMissingScheduleDates,
   getReleaseTargetDate,
   getWeeklyGenerationStartDate,
+  MISSING_WEB_REFERENCE_MESSAGE,
+  requireWebReference,
 } from "@/lib/daily-problem-generation";
 
 describe("chooseGenerationTarget", () => {
@@ -35,6 +37,23 @@ describe("getMissingScheduleDates", () => {
         "2026-07-30",
       ]),
     ).toEqual(["2026-06-15", "2026-06-17"]);
+  });
+});
+
+describe("requireWebReference", () => {
+  it("fails instead of allowing AI-only generation when no web reference exists", () => {
+    expect(() => requireWebReference([])).toThrow(MISSING_WEB_REFERENCE_MESSAGE);
+  });
+
+  it("returns the first scraped web reference", () => {
+    const reference = {
+      title: "웹 문제",
+      question: "상황 설명",
+      answer: "정답 설명",
+      sourceUrl: "https://example.com/puzzle",
+    };
+
+    expect(requireWebReference([reference])).toBe(reference);
   });
 });
 

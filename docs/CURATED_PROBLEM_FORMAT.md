@@ -15,13 +15,15 @@
     "answerKeywords": ["핵심 원인", "장치", "결과"],
     "category": "Logic",
     "difficulty": "Medium",
+    "hint1": "정답을 직접 말하지 않는 방향 힌트",
+    "hint2": "핵심 명사를 숨긴 더 구체적인 힌트",
     "source": "Web",
     "sourceUrl": "https://example.com/reference"
   }
 ]
 ```
 
-`source`는 `Manual` 또는 `Web`, `category`는 `Paradox | Weird | Logic | Mystery`, `difficulty`는 `Easy | Medium | Hard`만 허용합니다.
+`source`는 `Manual` 또는 `Web`, `category`는 `Paradox | Weird | Logic | Mystery`, `difficulty`는 `Easy | Medium | Hard`만 허용합니다. `source="Web"` 문제는 `sourceUrl`이 필수이며, 모든 import 문제는 `hint1`과 `hint2`를 포함해야 합니다.
 
 ```bash
 npm run problems:import

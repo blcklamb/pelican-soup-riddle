@@ -13,7 +13,7 @@
 
 ## 웹 수집 문제가 생성되지 않음
 
-`SCRAPE_SOURCE_URLS`가 Production 환경에 설정되어 있는지 확인합니다. 각 URL은 공개 접근 가능한 HTML이어야 하며, 현재 추출기는 `문제:`/`정답:` 또는 `Q:`/`A:` 형식의 텍스트를 우선 수집합니다. URL 접근 실패나 후보 부족 시 자동으로 AI 신규 생성으로 fallback합니다.
+`SCRAPE_SOURCE_URLS`가 Production 환경에 설정되어 있는지 확인합니다. 각 URL은 공개 접근 가능한 HTML이거나 Puzzling Stack Exchange `lateral-thinking` 태그 페이지여야 합니다. 현재 추출기는 `문제:`/`정답:` 또는 `Q:`/`A:` 형식의 텍스트와 Puzzling API 후보를 수집합니다. 최종 후보가 없으면 AI 신규 생성으로 fallback하지 않고 실패 이력을 남깁니다.
 
 ## Cron 401
 

@@ -4,6 +4,7 @@ import {
   buildGameMasterPrompt,
   buildProblemGenerationPrompt,
   buildProblemReviewPrompt,
+  generateReviewedProblem,
   normalizeAiAnswer,
 } from "@/lib/openai";
 
@@ -67,13 +68,15 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("기존 문제");
   });
 
-  it("includes safety, originality, clues, and retry feedback", () => {
+  it("requires web references instead of pure AI invention", () => {
     const prompt = buildProblemGenerationPrompt(
       ["기존 문제"],
       ["핵심 인과관계가 약합니다."],
     );
 
-    expect(prompt).toContain("완전히 새로운 문제");
+    expect(prompt).toContain("웹 참고 문제가 없으면 새 문제를 상상해서 만들지 말고 실패");
+    expect(prompt).toContain("black stories");
+    expect(prompt).toContain("상용 카드의 문구");
     expect(prompt).toContain("관찰 가능한 단서");
     expect(prompt).toContain("잔혹한 신체 훼손");
     expect(prompt).toContain("핵심 인과관계가 약합니다.");
@@ -89,8 +92,15 @@ describe("problem generation prompt", () => {
 
     const generationPrompt = buildProblemGenerationPrompt([], [], [reference]);
     expect(generationPrompt).toContain("웹 참고 문제");
-    expect(generationPrompt).toContain("원문을 축약 복사하지 말고");
+    expect(generationPrompt).toContain("웹 참고 문제를 축약 복사하지 말고");
+    expect(generationPrompt).toContain("black stories");
     expect(generationPrompt).toContain("https://example.com/turtle-soup");
+  });
+
+  it("refuses generation when no web reference is supplied", async () => {
+    await expect(
+      generateReviewedProblem({ existingProblems: [], references: [] }),
+    ).rejects.toThrow("웹 참고 문제가 필요합니다");
   });
 
   it("requires an independent review score of at least 80", () => {
@@ -124,6 +134,7 @@ describe("problem generation prompt", () => {
     expect(prompt).toContain("핵심 장치가 중복");
     expect(prompt).toContain("기존 문제");
     expect(prompt).toContain("서비스용으로 재구성");
+    expect(prompt).toContain("black stories 상용 카드");
     expect(prompt).toContain("https://example.com/reference");
   });
 });
