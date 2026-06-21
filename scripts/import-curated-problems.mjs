@@ -28,8 +28,13 @@ function validate(item, index) {
   if (!Array.isArray(item.answerKeywords) || item.answerKeywords.length < 3) {
     throw new Error(`${index + 1}번 문제에는 키워드가 3개 이상 필요합니다.`);
   }
-  if (item.source === "Web" && !item.sourceUrl) {
-    throw new Error(`${index + 1}번 Web 문제에는 sourceUrl이 필요합니다.`);
+  const source = item.source === "Web" ? "Web" : "Manual";
+  let sourceUrl = "";
+  if (source === "Web") {
+    if (typeof item.sourceUrl !== "string" || item.sourceUrl.trim().length < 1) {
+      throw new Error(`${index + 1}번 Web 문제에는 sourceUrl이 필요합니다.`);
+    }
+    sourceUrl = item.sourceUrl.trim();
   }
 
   return {
@@ -41,8 +46,8 @@ function validate(item, index) {
     answerKeywords: item.answerKeywords.map((keyword) => String(keyword).trim()),
     category: item.category,
     difficulty: item.difficulty,
-    source: item.source === "Web" ? "Web" : "Manual",
-    sourceUrl: item.sourceUrl ? String(item.sourceUrl) : "",
+    source,
+    sourceUrl,
     hint1: requiredText(item, "hint1", 10),
     hint2: requiredText(item, "hint2", 10),
   };

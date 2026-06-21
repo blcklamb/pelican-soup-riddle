@@ -699,7 +699,7 @@ $curated$::jsonb) as item(
   returning id
 )
 insert into public.daily_releases (release_date, problem_id, is_released)
-select "releaseDate", id, "releaseDate" <= current_date
+select "releaseDate", id, "releaseDate" <= (now() at time zone 'Asia/Seoul')::date
 from curated
 on conflict (release_date) do update set
   problem_id = excluded.problem_id,

@@ -92,7 +92,9 @@ function isAnswerLine(text: string) {
 
 function isPuzzlingStackExchangeSource(url: string) {
   try {
-    return new URL(url).hostname === PUZZLING_HOSTNAME;
+    const parsed = new URL(url);
+    if (parsed.hostname !== PUZZLING_HOSTNAME) return false;
+    return /^\/questions\/tagged\/lateral-thinking\/?$/.test(parsed.pathname);
   } catch {
     return false;
   }

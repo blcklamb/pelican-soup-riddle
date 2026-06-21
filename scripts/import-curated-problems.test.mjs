@@ -32,6 +32,16 @@ describe("validateCuratedProblems", () => {
     ).toThrow("Web 문제에는 sourceUrl이 필요합니다");
 
     expect(() =>
+      validateCuratedProblems([{ ...validProblem, sourceUrl: "   " }]),
+    ).toThrow("Web 문제에는 sourceUrl이 필요합니다");
+
+    expect(
+      validateCuratedProblems([
+        { ...validProblem, sourceUrl: "  https://example.com/source  " },
+      ])[0].sourceUrl,
+    ).toBe("https://example.com/source");
+
+    expect(() =>
       validateCuratedProblems([{ ...validProblem, hint1: "" }]),
     ).toThrow("hint1 값이 올바르지 않습니다");
 

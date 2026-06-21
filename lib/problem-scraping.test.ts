@@ -177,4 +177,27 @@ describe("fetchScrapedProblemReferences", () => {
       },
     ]);
   });
+
+  it("does not use the API adapter for non lateral-thinking Puzzling URLs", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response("<html><body></body></html>", {
+          headers: { "content-type": "text/html" },
+        }),
+      );
+
+    await fetchScrapedProblemReferences(
+      ["https://puzzling.stackexchange.com/questions/31761/guard"],
+      fetcher,
+    );
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe(
+      "https://puzzling.stackexchange.com/questions/31761/guard",
+    );
+    expect(String(fetcher.mock.calls[0]?.[0])).not.toContain(
+      "api.stackexchange.com",
+    );
+  });
 });
